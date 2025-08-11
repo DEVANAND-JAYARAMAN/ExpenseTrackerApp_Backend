@@ -21,14 +21,19 @@ FROM alpine:3.19
 
 WORKDIR /app
 
-# Add CA certificates for HTTPS requests
-RUN apk add --no-cache ca-certificates
+# Add CA certificates and netcat for wait script
+RUN apk add --no-cache ca-certificates netcat-openbsd
 
 # Copy the built binary from builder
 COPY --from=builder /app/api .
 
-# Expose API port (update if your app uses another)
+# Wait script for Postgres readiness
+COPY wait-for-db.sh .
+
+RUN chmod +x wait-for-db.sh
+
+# Expose API port
 EXPOSE 8080
 
-# Run the binary
-CMD ["./api"]
+# Wait for DB then start API
+CMD ["sh", "-c", "./wait-for-db.sh $DB_HOST $DB_PORT && ./api"]
