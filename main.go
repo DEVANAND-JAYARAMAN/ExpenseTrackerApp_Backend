@@ -36,6 +36,7 @@ func main() {
 	// Routes
 	api := e.Group("/api")
 	api.POST("/register", authHandler.Register)
+	api.POST("/login", authHandler.Login)
 
 	// Start server
 	port := os.Getenv("PORT")

@@ -79,6 +79,18 @@ type RegisterResponse struct {
 	User    User   `json:"user"`
 }
 
+// LoginRequest represents the request payload for user login
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+// LoginResponse represents the response for successful user login
+type LoginResponse struct {
+	Message string `json:"message"`
+	Token   string `json:"token"`
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`
