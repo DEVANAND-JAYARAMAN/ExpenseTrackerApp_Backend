@@ -91,6 +91,42 @@ type LoginResponse struct {
 	Token   string `json:"token"`
 }
 
+// AddExpenseRequest represents the request payload for adding an expense
+type AddExpenseRequest struct {
+	Title       string    `json:"title" validate:"required"`
+	Description *string   `json:"description,omitempty"`
+	Amount      float64   `json:"amount" validate:"required,gt=0"`
+	CategoryID  uuid.UUID `json:"category_id" validate:"required"`
+	ExpenseDate string    `json:"expense_date" validate:"required"`
+	ExpenseTime string    `json:"expense_time" validate:"required"`
+}
+
+// UpdateExpenseRequest represents the request payload for updating an expense
+type UpdateExpenseRequest struct {
+	Title       string    `json:"title" validate:"required"`
+	Description *string   `json:"description,omitempty"`
+	Amount      float64   `json:"amount" validate:"required,gt=0"`
+	CategoryID  uuid.UUID `json:"category_id" validate:"required"`
+	ExpenseDate string    `json:"expense_date" validate:"required"`
+	ExpenseTime string    `json:"expense_time" validate:"required"`
+}
+
+// AddExpenseResponse represents the response for successful expense addition
+type AddExpenseResponse struct {
+	Message   string    `json:"message"`
+	ExpenseID uuid.UUID `json:"expense_id"`
+}
+
+// UpdateExpenseResponse represents the response for successful expense update
+type UpdateExpenseResponse struct {
+	Message string `json:"message"`
+}
+
+// DeleteExpenseResponse represents the response for successful expense deletion
+type DeleteExpenseResponse struct {
+	Message string `json:"message"`
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`

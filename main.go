@@ -32,11 +32,21 @@ func main() {
 
 	// Initialize handlers
 	authHandler := NewAuthHandler(db)
+	expenseHandler := NewExpenseHandler(db)
 
 	// Routes
 	api := e.Group("/api")
+	
+	// Public routes
 	api.POST("/register", authHandler.Register)
 	api.POST("/login", authHandler.Login)
+	
+	// Protected routes
+	protected := api.Group("", JWTMiddleware())
+	protected.POST("/expenses", expenseHandler.AddExpense)
+	protected.GET("/expenses", expenseHandler.GetExpenses)
+	protected.PUT("/expenses/:id", expenseHandler.UpdateExpense)
+	protected.DELETE("/expenses/:id", expenseHandler.DeleteExpense)
 
 	// Start server
 	port := os.Getenv("PORT")

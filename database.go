@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -37,7 +38,7 @@ func initDB() (*sql.DB, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 
-	// Open database connection
+	// Try to connect to the database
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %v", err)
@@ -45,7 +46,21 @@ func initDB() (*sql.DB, error) {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %v", err)
+		// If database doesn't exist, try to create it
+		if err := createDatabaseIfNotExists(host, port, user, password, dbname); err != nil {
+			return nil, fmt.Errorf("failed to create database: %v", err)
+		}
+		
+		// Try connecting again
+		db.Close()
+		db, err = sql.Open("postgres", psqlInfo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open database after creation: %v", err)
+		}
+		
+		if err := db.Ping(); err != nil {
+			return nil, fmt.Errorf("failed to ping database: %v", err)
+		}
 	}
 
 	// Create all tables
@@ -123,7 +138,58 @@ func createAllTables(db *sql.DB) error {
 		expires_at TIMESTAMP,
 		is_active BOOLEAN DEFAULT TRUE
 	);
+
+	-- INSERT DEFAULT CATEGORIES (if they don't exist)
+	INSERT INTO categories (id, name, user_id, is_default) 
+	SELECT '123e4567-e89b-12d3-a456-426614174000'::uuid, 'Food', NULL, true
+	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174000'::uuid);
+
+	INSERT INTO categories (id, name, user_id, is_default) 
+	SELECT '123e4567-e89b-12d3-a456-426614174001'::uuid, 'Transportation', NULL, true
+	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174001'::uuid);
+
+	INSERT INTO categories (id, name, user_id, is_default) 
+	SELECT '123e4567-e89b-12d3-a456-426614174002'::uuid, 'Entertainment', NULL, true
+	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174002'::uuid);
+
+	INSERT INTO categories (id, name, user_id, is_default) 
+	SELECT '123e4567-e89b-12d3-a456-426614174003'::uuid, 'Shopping', NULL, true
+	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174003'::uuid);
+
+	INSERT INTO categories (id, name, user_id, is_default) 
+	SELECT '123e4567-e89b-12d3-a456-426614174004'::uuid, 'Bills', NULL, true
+	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174004'::uuid);
 	`
 	_, err := db.Exec(query)
 	return err
+}
+
+// createDatabaseIfNotExists creates the database if it doesn't exist
+func createDatabaseIfNotExists(host, port, user, password, dbname string) error {
+	// Connect to postgres database to create our target database
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=postgres sslmode=disable",
+		host, port, user, password)
+	
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	
+	if err := db.Ping(); err != nil {
+		return err
+	}
+	
+	// Create database
+	query := fmt.Sprintf("CREATE DATABASE %s", dbname)
+	_, err = db.Exec(query)
+	if err != nil {
+		// Ignore error if database already exists
+		if !strings.Contains(err.Error(), "already exists") {
+			return err
+		}
+	}
+	
+	log.Printf("Database %s created successfully", dbname)
+	return nil
 }
