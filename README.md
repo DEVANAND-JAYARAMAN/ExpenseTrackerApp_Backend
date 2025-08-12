@@ -22,18 +22,18 @@ Think of it as a digital notebook for your money, but smarter!
 ### Step-by-Step Setup
 
 1. **Install dependencies:**
-   ```bash
+
    go mod tidy
-   ```
+  
 
 2. **Set up your database:**
-   ```sql
+  
    CREATE DATABASE expense_tracker;
-   ```
+   
 
 3. **Configure your environment:**
    The `.env` file contains your database settings. Update the password if needed:
-   ```
+   
    DB_HOST=localhost
    DB_PORT=5432
    DB_NAME=expense_tracker
@@ -41,12 +41,12 @@ Think of it as a digital notebook for your money, but smarter!
    DB_PASSWORD=your_password_here
    PORT=3000
    JWT_SECRET=your_jwt_secret_key_here
-   ```
+   
 
 4. **Start the application:**
-   ```bash
+  
    go run .
-   ```
+   
 
    You'll see: `Server starting on port 3000`
 
