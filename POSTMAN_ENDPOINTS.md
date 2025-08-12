@@ -64,3 +64,10 @@
   "error": "Email or Password is Wrong"
 }
 ```
+
+
+
+
+
+
+## Get User Profile
