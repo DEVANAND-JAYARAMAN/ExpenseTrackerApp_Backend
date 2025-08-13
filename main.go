@@ -33,6 +33,7 @@ func main() {
 	// Initialize handlers
 	authHandler := NewAuthHandler(db)
 	expenseHandler := NewExpenseHandler(db)
+	categoryHandler := NewCategoryHandler(db)
 
 	// Routes
 	api := e.Group("/api")
@@ -43,6 +44,9 @@ func main() {
 	
 	// Protected routes
 	protected := api.Group("", JWTMiddleware())
+	protected.POST("/logout", authHandler.Logout)
+	protected.GET("/categories", categoryHandler.GetCategories)
+	protected.POST("/categories", categoryHandler.CreateCategory)
 	protected.POST("/expenses", expenseHandler.AddExpense)
 	protected.GET("/expenses", expenseHandler.GetExpenses)
 	protected.PUT("/expenses/:id", expenseHandler.UpdateExpense)

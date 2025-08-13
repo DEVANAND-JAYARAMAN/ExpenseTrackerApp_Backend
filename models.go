@@ -87,28 +87,29 @@ type LoginRequest struct {
 
 // LoginResponse represents the response for successful user login
 type LoginResponse struct {
-	Message string `json:"message"`
-	Token   string `json:"token"`
+	Message   string `json:"message"`
+	Token     string `json:"token"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 // AddExpenseRequest represents the request payload for adding an expense
 type AddExpenseRequest struct {
-	Title       string    `json:"title" validate:"required"`
-	Description *string   `json:"description,omitempty"`
-	Amount      float64   `json:"amount" validate:"required,gt=0"`
-	CategoryID  uuid.UUID `json:"category_id" validate:"required"`
-	ExpenseDate string    `json:"expense_date" validate:"required"`
-	ExpenseTime string    `json:"expense_time" validate:"required"`
+	Title        string  `json:"title" validate:"required"`
+	Description  *string `json:"description,omitempty"`
+	Amount       float64 `json:"amount" validate:"required,gt=0"`
+	CategoryName string  `json:"category_name" validate:"required"`
+	ExpenseDate  string  `json:"expense_date" validate:"required"`
+	ExpenseTime  string  `json:"expense_time" validate:"required"`
 }
 
 // UpdateExpenseRequest represents the request payload for updating an expense
 type UpdateExpenseRequest struct {
-	Title       string    `json:"title" validate:"required"`
-	Description *string   `json:"description,omitempty"`
-	Amount      float64   `json:"amount" validate:"required,gt=0"`
-	CategoryID  uuid.UUID `json:"category_id" validate:"required"`
-	ExpenseDate string    `json:"expense_date" validate:"required"`
-	ExpenseTime string    `json:"expense_time" validate:"required"`
+	Title        string  `json:"title" validate:"required"`
+	Description  *string `json:"description,omitempty"`
+	Amount       float64 `json:"amount" validate:"required,gt=0"`
+	CategoryName string  `json:"category_name" validate:"required"`
+	ExpenseDate  string  `json:"expense_date" validate:"required"`
+	ExpenseTime  string  `json:"expense_time" validate:"required"`
 }
 
 // AddExpenseResponse represents the response for successful expense addition
@@ -125,6 +126,17 @@ type UpdateExpenseResponse struct {
 // DeleteExpenseResponse represents the response for successful expense deletion
 type DeleteExpenseResponse struct {
 	Message string `json:"message"`
+}
+
+// CreateCategoryRequest represents the request payload for creating a category
+type CreateCategoryRequest struct {
+	Name string `json:"name" validate:"required,min=2,max=255"`
+}
+
+// CreateCategoryResponse represents the response for successful category creation
+type CreateCategoryResponse struct {
+	Message    string    `json:"message"`
+	CategoryID uuid.UUID `json:"category_id"`
 }
 
 // ErrorResponse represents an error response

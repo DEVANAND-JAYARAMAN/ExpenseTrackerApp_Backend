@@ -160,15 +160,23 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		})
 	}
 
+	// Create session record
+	sessionID, err := h.createSession(user.ID, token)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to create session",
+		})
+	}
+
 	// Record login history
 	if err := h.recordLoginHistory(user.ID); err != nil {
 		// Log error but don't fail the login
-		// In production, you might want to log this properly
 	}
 
 	return c.JSON(http.StatusOK, LoginResponse{
-		Message: "Login successful.",
-		Token:   token,
+		Message:   "Login successful.",
+		Token:     token,
+		SessionID: sessionID.String(),
 	})
 }
 
@@ -211,10 +219,69 @@ func (h *AuthHandler) generateJWT(userID uuid.UUID) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+// createSession creates a new session record
+func (h *AuthHandler) createSession(userID uuid.UUID, token string) (uuid.UUID, error) {
+	sessionID := uuid.New()
+	expiresAt := time.Now().Add(time.Hour * 720) // 30 days
+	
+	query := `INSERT INTO sessions (id, user_id, token, created_at, expires_at, is_active) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := h.db.Exec(query, sessionID, userID, token, time.Now(), expiresAt, true)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	
+	return sessionID, nil
+}
+
+// deactivateSession deactivates a session
+func (h *AuthHandler) deactivateSession(sessionID uuid.UUID) error {
+	query := `UPDATE sessions SET is_active = false WHERE id = $1`
+	_, err := h.db.Exec(query, sessionID)
+	return err
+}
+
 // recordLoginHistory records user login in history table
 func (h *AuthHandler) recordLoginHistory(userID uuid.UUID) error {
 	query := `INSERT INTO login_history (id, user_id, login_at) VALUES ($1, $2, $3)`
 	_, err := h.db.Exec(query, uuid.New(), userID, time.Now())
+	return err
+}
+
+// Logout handles user logout and session cleanup
+func (h *AuthHandler) Logout(c echo.Context) error {
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Get token from header
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: "Authorization header required",
+		})
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	
+	// Deactivate session
+	if err := h.deactivateSessionByToken(token); err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to logout",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Logout successful",
+	})
+}
+
+// deactivateSessionByToken deactivates session by token
+func (h *AuthHandler) deactivateSessionByToken(token string) error {
+	query := `UPDATE sessions SET is_active = false WHERE token = $1`
+	_, err := h.db.Exec(query, token)
 	return err
 }
 

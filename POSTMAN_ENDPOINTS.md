@@ -79,7 +79,7 @@
   "title": "Groceries",
   "description": "Monthly grocery shopping",
   "amount": 2200.50,
-  "category_id": "e7a2c98d-1234-4a2b-89f5-91bc4f9f3b2c",
+  "category_name": "Food",
   "expense_date": "2025-08-06",
   "expense_time": "19:30"
 }
@@ -114,7 +114,7 @@
   "title": "Groceries Updated",
   "description": "Updated grocery note",
   "amount": 2100,
-  "category_id": "e7a2c98d-1234-4a2b-89f5-91bc4f9f3b2c",
+  "category_name": "Food",
   "expense_date": "2025-08-06",
   "expense_time": "20:00"
 }
@@ -152,6 +152,78 @@
 ```json
 {
   "error": "Expense not found or unauthorized"
+}
+```
+
+## Get Categories (for dropdown)
+
+**URL:** `http://localhost:3000/api/categories`  
+**Method:** GET  
+**Headers:** `Authorization: Bearer jwt_token`
+
+**Success Response (200):**
+```json
+{
+  "message": "Categories retrieved successfully",
+  "categories": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "Food",
+      "is_default": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174001",
+      "name": "Transportation",
+      "is_default": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+## Create New Category
+
+**URL:** `http://localhost:3000/api/categories`  
+**Method:** POST  
+**Headers:** 
+- `Content-Type: application/json`
+- `Authorization: Bearer jwt_token`
+
+**Request Body:**
+```json
+{
+  "name": "Fuel"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "message": "Category created successfully",
+  "category_id": "new-category-uuid"
+}
+```
+
+**Error Response (409):**
+```json
+{
+  "error": "Category already exists"
+}
+```
+
+## User Logout
+
+**URL:** `http://localhost:3000/api/logout`  
+**Method:** POST  
+**Headers:** `Authorization: Bearer jwt_token`
+
+**Success Response (200):**
+```json
+{
+  "message": "Logout successful"
 }
 ```
 

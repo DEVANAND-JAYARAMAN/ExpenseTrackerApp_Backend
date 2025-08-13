@@ -44,6 +44,14 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 		})
 	}
 
+	// Get or create category
+	categoryID, err := h.getOrCreateCategory(userID, req.CategoryName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to handle category: %v", err),
+		})
+	}
+
 	// Parse date and time
 	expenseDate, expenseTime, err := parseDateTime(req.ExpenseDate, req.ExpenseTime)
 	if err != nil {
@@ -54,7 +62,7 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 
 	// Create expense
 	expenseID := uuid.New()
-	err = h.createExpense(expenseID, userID, req.Title, req.Description, req.Amount, req.CategoryID, expenseDate, expenseTime)
+	err = h.createExpense(expenseID, userID, req.Title, req.Description, req.Amount, categoryID, expenseDate, expenseTime)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: fmt.Sprintf("Failed to create expense: %v", err),
@@ -110,6 +118,14 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
+	// Get or create category
+	categoryID, err := h.getOrCreateCategory(userID, req.CategoryName)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to handle category: %v", err),
+		})
+	}
+
 	// Parse date and time
 	expenseDate, expenseTime, err := parseDateTime(req.ExpenseDate, req.ExpenseTime)
 	if err != nil {
@@ -119,7 +135,7 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 	}
 
 	// Update expense
-	err = h.updateExpense(expenseID, req.Title, req.Description, req.Amount, req.CategoryID, expenseDate, expenseTime)
+	err = h.updateExpense(expenseID, req.Title, req.Description, req.Amount, categoryID, expenseDate, expenseTime)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to update expense",
@@ -205,8 +221,8 @@ func validateAddExpenseRequest(req AddExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if req.CategoryID == uuid.Nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
+	if strings.TrimSpace(req.CategoryName) == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Category name is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")
@@ -224,8 +240,8 @@ func validateUpdateExpenseRequest(req UpdateExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if req.CategoryID == uuid.Nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
+	if strings.TrimSpace(req.CategoryName) == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Category name is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")
@@ -351,4 +367,33 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]Expense, error) {
 	}
 
 	return expenses, nil
+}
+
+// getOrCreateCategory gets existing category or creates new one
+func (h *ExpenseHandler) getOrCreateCategory(userID uuid.UUID, categoryName string) (uuid.UUID, error) {
+	// First, try to find existing category (default or user-owned)
+	var categoryID uuid.UUID
+	query := `SELECT id FROM categories WHERE LOWER(name) = LOWER($1) AND (is_default = true OR user_id = $2) LIMIT 1`
+	err := h.db.QueryRow(query, categoryName, userID).Scan(&categoryID)
+	
+	if err == nil {
+		// Category exists, return it
+		return categoryID, nil
+	}
+	
+	if err != sql.ErrNoRows {
+		// Database error
+		return uuid.Nil, err
+	}
+	
+	// Category doesn't exist, create new one
+	categoryID = uuid.New()
+	now := time.Now()
+	createQuery := `INSERT INTO categories (id, name, user_id, is_default, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = h.db.Exec(createQuery, categoryID, categoryName, userID, false, now, now)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	
+	return categoryID, nil
 }

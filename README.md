@@ -73,27 +73,50 @@ The app automatically creates these tables when you first run it:
 
 #### 2. Login
 - **Endpoint**: `POST /api/login`
-- **What it does**: Logs you into your account and gives you a security token
+- **What it does**: Logs you into your account and gives you a security token + session ID
 - **When to use**: Every time you want to access your expenses
 - **Example**: Enter your email and password to get access
+- **Returns**: JWT token and session ID for tracking
+
+#### 3. Logout
+- **Endpoint**: `POST /api/logout`
+- **What it does**: Safely logs you out and deactivates your session
+- **When to use**: When you're done using the app
+- **Authentication**: Requires login token
+
+### Category Management
+
+#### 4. Get Categories
+- **Endpoint**: `GET /api/categories`
+- **What it does**: Gets all available categories for the dropdown menu
+- **When to use**: When you need to select a category for an expense
+- **Example**: Shows Food, Transportation, Entertainment, Shopping, Bills
+- **Authentication**: Requires login token
+
+#### 5. Create New Category
+- **Endpoint**: `POST /api/categories`
+- **What it does**: Creates a new custom category when existing ones don't fit
+- **When to use**: When you need a category that doesn't exist (like "Fuel", "Medical", etc.)
+- **Example**: Create "Fuel" category for gas expenses
+- **Authentication**: Requires login token
 
 ### Expense Management
 
-#### 3. Add New Expense
+#### 6. Add New Expense
 - **Endpoint**: `POST /api/expenses`
 - **What it does**: Creates a new expense record with title, amount, category, and date/time
 - **When to use**: Every time you spend money and want to track it
 - **Example**: Record buying groceries for $50 in the "Food" category
 - **Authentication**: Requires login token
 
-#### 4. Update Expense
+#### 7. Update Expense
 - **Endpoint**: `PUT /api/expenses/:id`
 - **What it does**: Updates an existing expense with new information
 - **When to use**: When you need to correct or modify an expense record
 - **Example**: Change the amount from $50 to $45 if you remembered the exact price
 - **Authentication**: Requires login token
 
-#### 5. Delete Expense
+#### 8. Delete Expense
 - **Endpoint**: `DELETE /api/expenses/:id`
 - **What it does**: Permanently removes an expense record
 - **When to use**: When you accidentally added a duplicate or wrong expense
@@ -172,14 +195,16 @@ For detailed testing examples, check the `POSTMAN_ENDPOINTS.md` file.
 ## 📝 Project Status
 
 This is an active project. Currently implemented:
-- ✅ User registration
-- ✅ User login with JWT authentication
-- ✅ Secure password handling
-- ✅ Database setup and management
-- ✅ Add new expenses with categories
-- ✅ Update existing expenses
-- ✅ Delete expenses
-- ✅ JWT-based authentication for protected routes
+- ✅ User registration and login with JWT authentication
+- ✅ Session management (create/deactivate sessions)
+- ✅ Secure password handling with bcrypt
+- ✅ Database setup with foreign key constraints
+- ✅ Category management with dropdown support
+- ✅ Add new expenses with category validation
+- ✅ Update existing expenses with ownership checks
+- ✅ Delete expenses with proper authorization
+- ✅ JWT-based authentication for all protected routes
+- ✅ Login history tracking
 
 Coming next:
 - 🔄 View expense history and lists
