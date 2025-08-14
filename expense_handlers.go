@@ -38,17 +38,9 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 	}
 
 	// Validate request
-	if err := validateAddExpenseRequest(req); err != nil {
+	if strings.TrimSpace(req.Title) == "" || req.Amount <= 0 || len(req.Categories) == 0 || strings.TrimSpace(req.ExpenseDate) == "" || strings.TrimSpace(req.ExpenseTime) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: err.Error(),
-		})
-	}
-
-	// Validate category ID
-	categoryName, exists := GetCategoryName(req.CategoryID)
-	if !exists {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid category ID",
+			Error: "Missing or invalid fields",
 		})
 	}
 
@@ -62,17 +54,48 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 
 	// Create expense
 	expenseID := uuid.New()
-	err = h.createExpense(expenseID, userID, req.Title, req.Description, req.Amount, req.CategoryID, categoryName, expenseDate, expenseTime)
+	now := time.Now()
+	query := `INSERT INTO expenses (id, user_id, title, description, amount, expense_date, expense_time, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, err = h.db.Exec(query, expenseID, userID, req.Title, req.Description, req.Amount, expenseDate, expenseTime, now, now)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: fmt.Sprintf("Failed to create expense: %v", err),
 		})
 	}
 
-	return c.JSON(http.StatusCreated, AddExpenseResponse{
-		Message:   "Expense added successfully",
-		ExpenseID: expenseID,
-	})
+	// Link categories
+	var categoryDetails []ExpenseCategoryDetail
+	for _, catID := range req.Categories {
+		// Insert into expense_categories
+		_, err := h.db.Exec(`INSERT INTO expense_categories (id, expense_id, category_id) VALUES ($1, $2, $3)`, uuid.New(), expenseID, catID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error: fmt.Sprintf("Failed to link category: %v", err),
+			})
+		}
+		// Get category details
+		var cat ExpenseCategoryDetail
+		err = h.db.QueryRow(`SELECT id, name, is_default FROM categories WHERE id = $1`, catID).Scan(&cat.ID, &cat.Name, &cat.IsDefault)
+		if err == nil {
+			categoryDetails = append(categoryDetails, cat)
+		}
+	}
+
+	// Build response
+	resp := ExpenseDetailResponse{}
+	resp.Message = "Expense created successfully."
+	resp.Expense.ID = expenseID
+	resp.Expense.UserID = userID
+	resp.Expense.Title = req.Title
+	resp.Expense.Description = req.Description
+	resp.Expense.Amount = req.Amount
+	resp.Expense.ExpenseDate = req.ExpenseDate
+	resp.Expense.ExpenseTime = req.ExpenseTime
+	resp.Expense.CreatedAt = now.Format(time.RFC3339)
+	resp.Expense.UpdatedAt = now.Format(time.RFC3339)
+	resp.Expense.Categories = categoryDetails
+
+	return c.JSON(http.StatusCreated, resp)
 }
 
 // UpdateExpense handles updating an existing expense
@@ -99,9 +122,9 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 	}
 
 	// Validate request
-	if err := validateUpdateExpenseRequest(req); err != nil {
+	if strings.TrimSpace(req.Title) == "" || req.Amount <= 0 || len(req.Categories) == 0 || strings.TrimSpace(req.ExpenseDate) == "" || strings.TrimSpace(req.ExpenseTime) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: err.Error(),
+			Error: "Missing or invalid fields",
 		})
 	}
 
@@ -118,14 +141,6 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
-	// Validate category ID
-	categoryName, exists := GetCategoryName(req.CategoryID)
-	if !exists {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid category ID",
-		})
-	}
-
 	// Parse date and time
 	expenseDate, expenseTime, err := parseDateTime(req.ExpenseDate, req.ExpenseTime)
 	if err != nil {
@@ -134,17 +149,52 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
-	// Update expense
-	err = h.updateExpense(expenseID, req.Title, req.Description, req.Amount, req.CategoryID, categoryName, expenseDate, expenseTime)
+	// Update expense fields
+	query := `UPDATE expenses SET title = $2, description = $3, amount = $4, expense_date = $5, expense_time = $6, updated_at = $7 WHERE id = $1`
+	_, err = h.db.Exec(query, expenseID, req.Title, req.Description, req.Amount, expenseDate, expenseTime, time.Now())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to update expense",
 		})
 	}
 
-	return c.JSON(http.StatusOK, UpdateExpenseResponse{
-		Message: "Expense updated successfully",
-	})
+	// Update categories: remove old links, add new ones
+	_, err = h.db.Exec(`DELETE FROM expense_categories WHERE expense_id = $1`, expenseID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to update expense categories",
+		})
+	}
+	var categoryDetails []ExpenseCategoryDetail
+	for _, catID := range req.Categories {
+		_, err := h.db.Exec(`INSERT INTO expense_categories (id, expense_id, category_id) VALUES ($1, $2, $3)`, uuid.New(), expenseID, catID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error: fmt.Sprintf("Failed to link category: %v", err),
+			})
+		}
+		var cat ExpenseCategoryDetail
+		err = h.db.QueryRow(`SELECT id, name, is_default FROM categories WHERE id = $1`, catID).Scan(&cat.ID, &cat.Name, &cat.IsDefault)
+		if err == nil {
+			categoryDetails = append(categoryDetails, cat)
+		}
+	}
+
+	// Build response
+	resp := ExpenseDetailResponse{}
+	resp.Message = "Expense updated successfully."
+	resp.Expense.ID = expenseID
+	resp.Expense.UserID = userID
+	resp.Expense.Title = req.Title
+	resp.Expense.Description = req.Description
+	resp.Expense.Amount = req.Amount
+	resp.Expense.ExpenseDate = req.ExpenseDate
+	resp.Expense.ExpenseTime = req.ExpenseTime
+	resp.Expense.UpdatedAt = time.Now().Format(time.RFC3339)
+	resp.Expense.CreatedAt = ""
+	resp.Expense.Categories = categoryDetails
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 // DeleteExpense handles deleting an expense

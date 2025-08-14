@@ -93,23 +93,46 @@ type LoginResponse struct {
 }
 
 // AddExpenseRequest represents the request payload for adding an expense
+
 type AddExpenseRequest struct {
-	Title       string  `json:"title" validate:"required"`
-	Description *string `json:"description,omitempty"`
-	Amount      float64 `json:"amount" validate:"required,gt=0"`
-	CategoryID  int     `json:"category_id" validate:"required"`
-	ExpenseDate string  `json:"expense_date" validate:"required"`
-	ExpenseTime string  `json:"expense_time" validate:"required"`
+	Title       string     `json:"title" validate:"required"`
+	Description *string    `json:"description,omitempty"`
+	Amount      float64    `json:"amount" validate:"required,gt=0"`
+	ExpenseDate string     `json:"expense_date" validate:"required"`
+	ExpenseTime string     `json:"expense_time" validate:"required"`
+	Categories  []uuid.UUID `json:"categories" validate:"required,dive,uuid"`
+}
+
+type ExpenseCategoryDetail struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	IsDefault bool      `json:"is_default"`
+}
+
+type ExpenseDetailResponse struct {
+	Message string `json:"message"`
+	Expense struct {
+		ID          uuid.UUID               `json:"id"`
+		UserID      uuid.UUID               `json:"user_id"`
+		Title       string                  `json:"title"`
+		Description *string                 `json:"description,omitempty"`
+		Amount      float64                 `json:"amount"`
+		ExpenseDate string                  `json:"expense_date"`
+		ExpenseTime string                  `json:"expense_time"`
+		CreatedAt   string                  `json:"created_at"`
+		UpdatedAt   string                  `json:"updated_at"`
+		Categories  []ExpenseCategoryDetail `json:"categories"`
+	} `json:"expense"`
 }
 
 // UpdateExpenseRequest represents the request payload for updating an expense
 type UpdateExpenseRequest struct {
-	Title       string  `json:"title" validate:"required"`
-	Description *string `json:"description,omitempty"`
-	Amount      float64 `json:"amount" validate:"required,gt=0"`
-	CategoryID  int     `json:"category_id" validate:"required"`
-	ExpenseDate string  `json:"expense_date" validate:"required"`
-	ExpenseTime string  `json:"expense_time" validate:"required"`
+	Title       string     `json:"title" validate:"required"`
+	Description *string    `json:"description,omitempty"`
+	Amount      float64    `json:"amount" validate:"required,gt=0"`
+	ExpenseDate string     `json:"expense_date" validate:"required"`
+	ExpenseTime string     `json:"expense_time" validate:"required"`
+	Categories  []uuid.UUID `json:"categories" validate:"required,dive,uuid"`
 }
 
 // AddExpenseResponse represents the response for successful expense addition
