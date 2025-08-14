@@ -159,8 +159,8 @@ type CreateCategoryRequest struct {
 
 // UpdateCategoryRequest represents payload for updating a category
 type UpdateCategoryRequest struct {
-	Name      string `json:"name" validate:"required,min=2,max=255"`
-	IsDefault bool   `json:"is_default"`
+	Name      string `json:"name"`
+	IsDefault *bool  `json:"is_default"` // optional; omit if you don't want clients changing defaults
 }
 
 // CreateCategoryResponse represents the response for successful category creation

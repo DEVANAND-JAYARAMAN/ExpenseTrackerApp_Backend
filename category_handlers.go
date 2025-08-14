@@ -32,7 +32,6 @@ func (h *CategoryHandler) GetCategories(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch categories"})
 	}
 
-	// Build response slice with explicit boolean is_default
 	resp := make([]map[string]interface{}, 0, len(categories))
 	for _, cat := range categories {
 		resp = append(resp, map[string]interface{}{
@@ -93,48 +92,41 @@ func (h *CategoryHandler) getAllCategories(userID uuid.UUID) ([]Category, error)
 func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
 	}
 
 	var req CreateCategoryRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid request body",
-		})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
 	}
 
 	// Validate category name
 	if strings.TrimSpace(req.Name) == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Category name is required",
-		})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Category name is required"})
 	}
 
 	// Check if category already exists for this user
 	if h.categoryExists(userID, req.Name) {
-		return c.JSON(http.StatusConflict, ErrorResponse{
-			Error: "Category already exists",
-		})
+		return c.JSON(http.StatusConflict, ErrorResponse{Error: "Category already exists"})
 	}
 
 	// Create new category with requested flag
 	categoryID := uuid.New()
-	isDefault := req.IsDefault
-	// If is_default true but user-specific, we still store user_id (user private default)
-	err := h.createCategoryWithFlag(categoryID, userID, req.Name, isDefault)
+	now := time.Now()
+	_, err := h.db.Exec(
+		`INSERT INTO categories (id, name, user_id, is_default, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+		categoryID, req.Name, userID, req.IsDefault, now, now,
+	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to create category",
-		})
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create category"})
 	}
 
-	return c.JSON(http.StatusCreated, CreateCategoryResponse{
-		Message:    "Category created successfully",
-		CategoryID: categoryID,
-		Name:       req.Name,
-		IsDefault:  isDefault,
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"message":     "Category created successfully",
+		"category_id": categoryID,
+		"name":        req.Name,
+		"is_default":  req.IsDefault,
 	})
 }
 
@@ -158,14 +150,15 @@ func (h *CategoryHandler) createCategoryWithFlag(id, userID uuid.UUID, name stri
 	return err
 }
 
-// UpdateCategory updates a user-owned (non-default) category name
+// UpdateCategory allows updating name and (for user-owned) is_default
 func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
 	}
 
-	catID, err := uuid.Parse(c.Param("id"))
+	idStr := c.Param("id")
+	catID, err := uuid.Parse(idStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid category ID"})
 	}
@@ -178,20 +171,51 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Category name is required"})
 	}
 
-	var ownerID *uuid.UUID
-	var isDefault bool
-	query := `SELECT user_id, is_default FROM categories WHERE id = $1`
-	if err := h.db.QueryRow(query, catID).Scan(&ownerID, &isDefault); err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
-		}
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Database error"})
+	// Load existing
+	var existing Category
+	err = h.db.QueryRow(
+		`SELECT id, name, user_id, is_default, created_at, updated_at FROM categories WHERE id = $1`,
+		catID,
+	).Scan(&existing.ID, &existing.Name, &existing.UserID, &existing.IsDefault, &existing.CreatedAt, &existing.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
 	}
-	if isDefault || ownerID == nil || *ownerID != userID {
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to load category"})
+	}
+
+	// Only user-owned categories can be modified
+	if existing.UserID != userID {
 		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Cannot update this category"})
 	}
 
-	_, err = h.db.Exec(`UPDATE categories SET name = $1, is_default = $2, updated_at = $3 WHERE id = $4`, req.Name, req.IsDefault, time.Now(), catID)
+	// Duplicate name check
+	var conflict bool
+	err = h.db.QueryRow(
+		`SELECT EXISTS(
+            SELECT 1 FROM categories
+            WHERE LOWER(name)=LOWER($1)
+              AND id <> $2
+              AND (user_id = $3 OR is_default = true)
+        )`,
+		req.Name, catID, userID,
+	).Scan(&conflict)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Validation failed"})
+	}
+	if conflict {
+		return c.JSON(http.StatusConflict, ErrorResponse{Error: "Category already exists"})
+	}
+
+	newIsDefault := existing.IsDefault
+	if req.IsDefault != nil {
+		newIsDefault = *req.IsDefault
+	}
+
+	_, err = h.db.Exec(
+		`UPDATE categories SET name = $1, is_default = $2, updated_at = $3 WHERE id = $4`,
+		req.Name, newIsDefault, time.Now(), catID,
+	)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update category"})
 	}
@@ -200,7 +224,7 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 		"message":     "Category updated successfully",
 		"category_id": catID,
 		"name":        req.Name,
-		"is_default":  req.IsDefault,
+		"is_default":  newIsDefault,
 	})
 }
 
@@ -216,26 +240,26 @@ func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid category ID"})
 	}
 
-	var ownerID *uuid.UUID
+	var owner uuid.UUID
 	var isDefault bool
-	query := `SELECT user_id, is_default FROM categories WHERE id = $1`
-	if err := h.db.QueryRow(query, catID).Scan(&ownerID, &isDefault); err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
-		}
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Database error"})
+	err = h.db.QueryRow(`SELECT user_id, is_default FROM categories WHERE id = $1`, catID).Scan(&owner, &isDefault)
+	if err == sql.ErrNoRows {
+		return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
 	}
-	if isDefault || ownerID == nil || *ownerID != userID {
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to load category"})
+	}
+	if owner != userID {
 		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Cannot delete this category"})
 	}
 
+	// (ON DELETE CASCADE will remove expense_categories rows)
 	_, err = h.db.Exec(`DELETE FROM categories WHERE id = $1`, catID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to delete category"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message":     "Category deleted successfully",
-		"category_id": catID,
+		"message": "Category deleted successfully.",
 	})
 }
