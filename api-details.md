@@ -9,7 +9,7 @@ This documentation reflects ONLY the endpoints actually implemented in the curre
 ### Register
 
 POST /api/register
-    
+
 Request
 
 ```json
@@ -202,7 +202,7 @@ Request
   "description": "string|null",
   "amount": "number",
   "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM:SS",
+  "expense_time": "HH:MM",
   "categories": ["uuid1", "uuid2", ...]
 }
 ```
@@ -219,7 +219,7 @@ Success 201
     "description": "string|null",
     "amount": "number",
     "expense_date": "YYYY-MM-DD",
-    "expense_time": "HH:MM:SS",
+    "expense_time": "HH:MM",
     "created_at": "timestamp",
     "updated_at": "timestamp",
     "categories": [
@@ -260,7 +260,7 @@ Success 200
       "category_id": "integer",
       "category_name": "string",
       "expense_date": "YYYY-MM-DD",
-      "expense_time": "HH:MM:SS",
+      "expense_time": "HH:MM",
       "created_at": "timestamp",
       "updated_at": "timestamp"
     }
@@ -280,7 +280,7 @@ Request
   "description": "string|null",
   "amount": "number",
   "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM:SS",
+  "expense_time": "HH:MM",
   "categories": ["uuid1", "uuid2", ...]
 }
 ```
@@ -297,7 +297,7 @@ Success 200
     "description": "string|null",
     "amount": "number",
     "expense_date": "YYYY-MM-DD",
-    "expense_time": "HH:MM:SS",
+    "expense_time": "HH:MM",
     "created_at": "timestamp",
     "updated_at": "timestamp",
     "categories": [
@@ -357,6 +357,7 @@ All error responses:
 ## Notes / Gaps
 
 - GetExpenses still returns legacy single category_id/category_name while create/update support multiple categories.
+- Time format required: expense_time must be HH:MM (no seconds).
 - UpdateExpense response leaves created_at blank (future improvement: fetch from DB).
 - JWT expiration set to 30 days in code.
 - Provide JWT_SECRET via environment variable in production.
