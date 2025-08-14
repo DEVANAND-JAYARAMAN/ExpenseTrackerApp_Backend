@@ -47,6 +47,8 @@ func main() {
 	protected.POST("/logout", authHandler.Logout)
 	protected.GET("/categories", categoryHandler.GetCategories)
 	protected.POST("/categories", categoryHandler.CreateCategory)
+	protected.PUT("/categories/:id", categoryHandler.UpdateCategory)
+	protected.DELETE("/categories/:id", categoryHandler.DeleteCategory)
 	protected.POST("/expenses", expenseHandler.AddExpense)
 	protected.GET("/expenses", expenseHandler.GetExpenses)
 	protected.PUT("/expenses/:id", expenseHandler.UpdateExpense)

@@ -271,8 +271,8 @@ func validateAddExpenseRequest(req AddExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if req.CategoryID <= 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
+	if len(req.Categories) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "At least one category is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")
@@ -290,8 +290,8 @@ func validateUpdateExpenseRequest(req UpdateExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if req.CategoryID <= 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
+	if len(req.Categories) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "At least one category is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")

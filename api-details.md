@@ -1,6 +1,6 @@
-# Expense Tracker API Documentation
+## Expense Tracker API (Current Code Alignment)
 
-This document describes all API routes, payloads, and responses for the Expense Tracker API, based on the latest codebase.
+This documentation reflects ONLY the endpoints actually implemented in the current Go code (`handlers.go`, `category_handlers.go`, `expense_handlers.go`, `main.go`). Removed any unused / stale sections (reactivate, login-history not implemented in handlers, etc.). Formats and field names match handler responses.
 
 ---
 
@@ -8,8 +8,9 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ### Register
 
-- **Endpoint:** `POST /api/register`
-- **Payload:**
+POST /api/register
+    
+Request
 
 ```json
 {
@@ -19,7 +20,7 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Success Response:**
+Success 201
 
 ```json
 {
@@ -37,14 +38,16 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 400: `{ "error": "Invalid request body" }`
-  - 409: `{ "error": "Email already exists" }`
+Errors
+
+- 400 Invalid request body / validation
+- 409 Email already exists
 
 ### Login
 
-- **Endpoint:** `POST /api/login`
-- **Payload:**
+POST /api/login
+
+Request
 
 ```json
 {
@@ -53,7 +56,7 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Success Response:**
+Success 200
 
 ```json
 {
@@ -63,15 +66,16 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 400: `{ "error": "Invalid request body" }`
-  - 401: `{ "error": "Email or Password is Wrong" }`
+Errors
+
+- 400 Invalid request body
+- 401 Email or Password is Wrong
 
 ### Logout
 
-- **Endpoint:** `POST /api/logout`
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response:**
+POST /api/logout (Bearer token required)
+
+Success 200
 
 ```json
 {
@@ -79,9 +83,10 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 401: `{ "error": "Unauthorized" }`
-  - 400: `{ "error": "Authorization header required" }`
+Errors
+
+- 400 Authorization header required
+- 401 Unauthorized
 
 ---
 
@@ -89,9 +94,9 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ### Get Categories
 
-- **Endpoint:** `GET /api/categories`
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response:**
+GET /api/categories (Bearer)
+
+Success 200
 
 ```json
 {
@@ -99,7 +104,14 @@ This document describes all API routes, payloads, and responses for the Expense 
     {
       "id": "uuid",
       "name": "string",
-      "is_default": true|false,
+      "is_default": true,
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    },
+    {
+      "id": "uuid",
+      "name": "string",
+      "is_default": false,
       "created_at": "timestamp",
       "updated_at": "timestamp"
     }
@@ -107,11 +119,14 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
+- The response contains all categories from the database for the user, with `is_default` as a boolean (`true` or `false`).
+  Errors: 401 Unauthorized
+
 ### Create Category
 
-- **Endpoint:** `POST /api/categories`
-- **Headers:** `Authorization: Bearer <token>`
-- **Payload:**
+POST /api/categories
+
+Request
 
 ```json
 {
@@ -119,7 +134,7 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Success Response:**
+Success 201
 
 ```json
 {
@@ -128,8 +143,48 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 400: `{ "error": "Invalid category data" }`
+Errors
+
+- 400 Invalid request body / validation
+- 409 Category already exists
+
+### Update Category
+
+PUT /api/categories/:id
+
+Request (only name allowed)
+{ "name": "string" }
+
+Success 200
+{ "message": "Category updated successfully", "category_id": "uuid", "name": "string" }
+
+Errors
+
+- 400 Invalid request body / ID
+- 401 Unauthorized
+- 403 Cannot update this category
+- 404 Category not found
+
+### Delete Category
+
+DELETE /api/categories/:id
+
+Success 200
+
+```json
+{
+  "message": "Category deleted successfully."
+}
+```
+
+Errors
+
+- 400 Invalid category ID
+- 401 Unauthorized
+- 403 Cannot delete this category
+- 404 Category not found
+
+---
 
 ---
 
@@ -137,9 +192,9 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ### Add Expense
 
-- **Endpoint:** `POST /api/expenses`
-- **Headers:** `Authorization: Bearer <token>`
-- **Payload:**
+POST /api/expenses (Bearer)
+
+Request
 
 ```json
 {
@@ -152,7 +207,7 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Success Response:**
+Success 201
 
 ```json
 {
@@ -183,14 +238,16 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 400: `{ "error": "Invalid expense data" }`
+Errors
+
+- 400 Missing or invalid fields / Invalid date or time format
+- 401 Unauthorized
 
 ### Get Expenses
 
-- **Endpoint:** `GET /api/expenses`
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response:**
+GET /api/expenses (Bearer)
+
+Success 200
 
 ```json
 {
@@ -213,9 +270,9 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ### Update Expense
 
-- **Endpoint:** `PUT /api/expenses/:id`
-- **Headers:** `Authorization: Bearer <token>`
-- **Payload:**
+PUT /api/expenses/:id (Bearer)
+
+Request
 
 ```json
 {
@@ -228,7 +285,7 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Success Response:**
+Success 200
 
 ```json
 {
@@ -259,15 +316,17 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 400: `{ "error": "Invalid expense data" }`
-  - 404: `{ "error": "Expense not found" }`
+Errors
+
+- 400 Missing or invalid fields / Invalid date or time format / Invalid expense ID
+- 401 Unauthorized
+- 404 Expense <id> not found for user <user_id>
 
 ### Delete Expense
 
-- **Endpoint:** `DELETE /api/expenses/:id`
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response:**
+DELETE /api/expenses/:id (Bearer)
+
+Success 200
 
 ```json
 {
@@ -275,14 +334,17 @@ This document describes all API routes, payloads, and responses for the Expense 
 }
 ```
 
-- **Error Responses:**
-  - 404: `{ "error": "Expense not found" }`
+Errors
+
+- 400 Invalid expense ID
+- 401 Unauthorized
+- 404 Expense <id> not found for user <user_id>
 
 ---
 
-## Error Response Format
+## Error Format
 
-All error responses follow this format:
+All error responses:
 
 ```json
 {
@@ -292,81 +354,9 @@ All error responses follow this format:
 
 ---
 
-## Notes
+## Notes / Gaps
 
-- All protected routes require a valid JWT token in the `Authorization` header.
-- Timestamps are in ISO 8601 format.
-- All IDs are UUIDs unless otherwise specified.
-- Default categories are created automatically for new users.
-  **Endpoint:** `POST /api/reactivate`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "message": "User reactivated successfully."
-}
-```
-
-**Error Responses:**
-
-- **Status:** 404 Not Found
-
-```json
-{
-  "error": "User not found"
-}
-```
-
----
-
-## 13. Get Login History
-
-**Endpoint:** `GET /api/login-history`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "login_history": [
-    {
-      "id": "uuid",
-      "login_at": "timestamp"
-    }
-  ]
-}
-```
-
-**Error Responses:**
-
-- **Status:** 401 Unauthorized
-
-```json
-{
-  "error": "Invalid or expired token"
-}
-```
-
----
-
-## Error Response Format
-
-All error responses follow this format:
-
-```json
-{
-  "error": "Error message here"
-}
-```
+- GetExpenses still returns legacy single category_id/category_name while create/update support multiple categories.
+- UpdateExpense response leaves created_at blank (future improvement: fetch from DB).
+- JWT expiration set to 30 days in code.
+- Provide JWT_SECRET via environment variable in production.

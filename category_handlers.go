@@ -24,16 +24,29 @@ func NewCategoryHandler(db *sql.DB) *CategoryHandler {
 func (h *CategoryHandler) GetCategories(c echo.Context) error {
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+	}
+
+	categories, err := h.getAllCategories(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch categories"})
+	}
+
+	// Build response slice with explicit boolean is_default
+	resp := make([]map[string]interface{}, 0, len(categories))
+	for _, cat := range categories {
+		resp = append(resp, map[string]interface{}{
+			"id":         cat.ID,
+			"name":       cat.Name,
+			"is_default": cat.IsDefault,
+			"created_at": cat.CreatedAt,
+			"updated_at": cat.UpdatedAt,
 		})
 	}
 
-	categories := GetAllCategories()
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message":    "Categories retrieved successfully",
-		"categories": categories,
+		"categories": resp,
 	})
 }
 
@@ -135,4 +148,85 @@ func (h *CategoryHandler) createCategory(id, userID uuid.UUID, name string) erro
 	now := time.Now()
 	_, err := h.db.Exec(query, id, name, userID, false, now, now)
 	return err
+}
+
+// UpdateCategory updates a user-owned (non-default) category name
+func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+	}
+
+	catID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid category ID"})
+	}
+
+	var req CreateCategoryRequest // reuse struct for name
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Category name is required"})
+	}
+
+	var ownerID *uuid.UUID
+	var isDefault bool
+	query := `SELECT user_id, is_default FROM categories WHERE id = $1`
+	if err := h.db.QueryRow(query, catID).Scan(&ownerID, &isDefault); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Database error"})
+	}
+	if isDefault || ownerID == nil || *ownerID != userID {
+		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Cannot update this category"})
+	}
+
+	_, err = h.db.Exec(`UPDATE categories SET name = $1, updated_at = $2 WHERE id = $3`, req.Name, time.Now(), catID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update category"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":     "Category updated successfully",
+		"category_id": catID,
+		"name":        req.Name,
+	})
+}
+
+// DeleteCategory deletes a user-owned (non-default) category
+func (h *CategoryHandler) DeleteCategory(c echo.Context) error {
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+	}
+
+	catID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid category ID"})
+	}
+
+	var ownerID *uuid.UUID
+	var isDefault bool
+	query := `SELECT user_id, is_default FROM categories WHERE id = $1`
+	if err := h.db.QueryRow(query, catID).Scan(&ownerID, &isDefault); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "Category not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Database error"})
+	}
+	if isDefault || ownerID == nil || *ownerID != userID {
+		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Cannot delete this category"})
+	}
+
+	_, err = h.db.Exec(`DELETE FROM categories WHERE id = $1`, catID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to delete category"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":     "Category deleted successfully",
+		"category_id": catID,
+	})
 }
