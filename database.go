@@ -140,27 +140,6 @@ func createAllTables(db *sql.DB) error {
 		expires_at TIMESTAMP,
 		is_active BOOLEAN DEFAULT TRUE
 	);
-
-	-- INSERT DEFAULT CATEGORIES (if they don't exist)
-	INSERT INTO categories (id, name, user_id, is_default) 
-	SELECT '123e4567-e89b-12d3-a456-426614174000'::uuid, 'Food', NULL, true
-	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174000'::uuid);
-
-	INSERT INTO categories (id, name, user_id, is_default) 
-	SELECT '123e4567-e89b-12d3-a456-426614174001'::uuid, 'Transportation', NULL, true
-	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174001'::uuid);
-
-	INSERT INTO categories (id, name, user_id, is_default) 
-	SELECT '123e4567-e89b-12d3-a456-426614174002'::uuid, 'Entertainment', NULL, true
-	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174002'::uuid);
-
-	INSERT INTO categories (id, name, user_id, is_default) 
-	SELECT '123e4567-e89b-12d3-a456-426614174003'::uuid, 'Shopping', NULL, true
-	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174003'::uuid);
-
-	INSERT INTO categories (id, name, user_id, is_default) 
-	SELECT '123e4567-e89b-12d3-a456-426614174004'::uuid, 'Bills', NULL, true
-	WHERE NOT EXISTS (SELECT 1 FROM categories WHERE id = '123e4567-e89b-12d3-a456-426614174004'::uuid);
 	`
 	_, err := db.Exec(query)
 	return err
