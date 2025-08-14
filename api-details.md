@@ -1,14 +1,15 @@
-# API Details
+# Expense Tracker API Documentation
 
-This document describes all API routes, their payloads, and responses for the Expense Tracker API.
+This document describes all API routes, payloads, and responses for the Expense Tracker API, based on the latest codebase.
 
 ---
 
-## 1. User Registration
+## Authentication
 
-**Endpoint:** `POST /api/register`
+### Register
 
-**Payload:**
+- **Endpoint:** `POST /api/register`
+- **Payload:**
 
 ```json
 {
@@ -18,9 +19,7 @@ This document describes all API routes, their payloads, and responses for the Ex
 }
 ```
 
-**Success Response:**
-
-- **Status:** 201 Created
+- **Success Response:**
 
 ```json
 {
@@ -38,31 +37,14 @@ This document describes all API routes, their payloads, and responses for the Ex
 }
 ```
 
-**Error Responses:**
+- **Error Responses:**
+  - 400: `{ "error": "Invalid request body" }`
+  - 409: `{ "error": "Email already exists" }`
 
-- **Status:** 400 Bad Request
+### Login
 
-```json
-{
-  "error": "Invalid request body"
-}
-```
-
-- **Status:** 409 Conflict
-
-```json
-{
-  "error": "Email already exists"
-}
-```
-
----
-
-## 2. User Login
-
-**Endpoint:** `POST /api/login`
-
-**Payload:**
+- **Endpoint:** `POST /api/login`
+- **Payload:**
 
 ```json
 {
@@ -71,228 +53,45 @@ This document describes all API routes, their payloads, and responses for the Ex
 }
 ```
 
-**Success Response:**
-
-- **Status:** 200 OK
+- **Success Response:**
 
 ```json
 {
   "message": "Login successful.",
-  "token": "jwt-token-string"
+  "token": "jwt-token-string",
+  "session_id": "uuid"
 }
 ```
 
-**Error Responses:**
+- **Error Responses:**
+  - 400: `{ "error": "Invalid request body" }`
+  - 401: `{ "error": "Email or Password is Wrong" }`
 
-- **Status:** 401 Unauthorized
+### Logout
+
+- **Endpoint:** `POST /api/logout`
+- **Headers:** `Authorization: Bearer <token>`
+- **Success Response:**
 
 ```json
 {
-  "error": "Invalid email or password"
+  "message": "Logout successful"
 }
 ```
+
+- **Error Responses:**
+  - 401: `{ "error": "Unauthorized" }`
+  - 400: `{ "error": "Authorization header required" }`
 
 ---
 
-## 3. Get User Profile
+## Categories
 
-**Endpoint:** `GET /api/profile`
+### Get Categories
 
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "user": {
-    "id": "uuid",
-    "name": "string",
-    "email": "string",
-    "profile_image": "string|null",
-    "created_at": "timestamp",
-    "updated_at": "timestamp",
-    "is_active": true,
-    "deactivated_at": "timestamp|null"
-  }
-}
-```
-
-**Error Responses:**
-
-- **Status:** 401 Unauthorized
-
-```json
-{
-  "error": "Invalid or expired token"
-}
-```
-
----
-
-## 4. Create Expense
-
-**Endpoint:** `POST /api/expenses`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Payload:**
-
-```json
-{
-  "title": "string",
-  "description": "string|null",
-  "amount": "number",
-  "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM:SS",
-  "categories": ["uuid", ...]
-}
-```
-
-**Success Response:**
-
-- **Status:** 201 Created
-
-```json
-{
-  "message": "Expense created successfully.",
-  "expense": {
-    "id": "uuid",
-    "user_id": "uuid",
-    "title": "string",
-    "description": "string|null",
-    "amount": "number",
-    "expense_date": "YYYY-MM-DD",
-    "expense_time": "HH:MM:SS",
-    "created_at": "timestamp",
-    "updated_at": "timestamp",
-    "categories": [
-      {
-        "id": "uuid",
-        "name": "string"
-      }
-    ]
-  }
-}
-```
-
-**Error Responses:**
-
-- **Status:** 400 Bad Request
-
-```json
-{
-  "error": "Invalid expense data"
-}
-```
-
----
-
-## 5. Get Expenses
-
-**Endpoint:** `GET /api/expenses`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "expenses": [
-    {
-      "id": "uuid",
-      "title": "string",
-      "amount": "number",
-      "expense_date": "YYYY-MM-DD",
-      "expense_time": "HH:MM:SS",
-      "categories": [
-        {
-          "id": "uuid",
-          "name": "string"
-        }
-      ]
-    }
-  ]
-}
-```
-
-**Error Responses:**
-
-- **Status:** 401 Unauthorized
-
-```json
-{
-  "error": "Invalid or expired token"
-}
-```
-
----
-
-## 6. Create Category
-
-**Endpoint:** `POST /api/categories`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Payload:**
-
-```json
-{
-  "name": "string"
-}
-```
-
-**Success Response:**
-
-- **Status:** 201 Created
-
-```json
-{
-  "message": "Category created successfully.",
-  "category": {
-    "id": "uuid",
-    "name": "string",
-    "is_default": false,
-    "created_at": "timestamp",
-    "updated_at": "timestamp"
-  }
-}
-```
-
-**Error Responses:**
-
-- **Status:** 400 Bad Request
-
-```json
-{
-  "error": "Invalid category data"
-}
-```
-
----
-
-## 7. Get Categories
-
-**Endpoint:** `GET /api/categories`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
+- **Endpoint:** `GET /api/categories`
+- **Headers:** `Authorization: Bearer <token>`
+- **Success Response:**
 
 ```json
 {
@@ -300,7 +99,7 @@ This document describes all API routes, their payloads, and responses for the Ex
     {
       "id": "uuid",
       "name": "string",
-      "is_default": false,
+      "is_default": true|false,
       "created_at": "timestamp",
       "updated_at": "timestamp"
     }
@@ -308,29 +107,122 @@ This document describes all API routes, their payloads, and responses for the Ex
 }
 ```
 
-**Error Responses:**
+### Create Category
 
-- **Status:** 401 Unauthorized
+- **Endpoint:** `POST /api/categories`
+- **Headers:** `Authorization: Bearer <token>`
+- **Payload:**
 
 ```json
 {
-  "error": "Invalid or expired token"
+  "name": "string (2-255 chars)"
 }
 ```
 
+- **Success Response:**
+
+```json
+{
+  "message": "Category created successfully.",
+  "category_id": "uuid"
+}
+```
+
+- **Error Responses:**
+  - 400: `{ "error": "Invalid category data" }`
+
 ---
 
-## 8. Delete Expense
+## Expenses
 
-**Endpoint:** `DELETE /api/expenses/{id}`
+### Add Expense
 
-**Headers:**
+- **Endpoint:** `POST /api/expenses`
+- **Headers:** `Authorization: Bearer <token>`
+- **Payload:**
 
-- `Authorization: Bearer <token>`
+```json
+{
+  "title": "string",
+  "description": "string|null",
+  "amount": "number (>0)",
+  "category_id": "integer",
+  "expense_date": "YYYY-MM-DD",
+  "expense_time": "HH:MM:SS"
+}
+```
 
-**Success Response:**
+- **Success Response:**
 
-- **Status:** 200 OK
+```json
+{
+  "message": "Expense added successfully.",
+  "expense_id": "uuid"
+}
+```
+
+- **Error Responses:**
+  - 400: `{ "error": "Invalid expense data" }`
+
+### Get Expenses
+
+- **Endpoint:** `GET /api/expenses`
+- **Headers:** `Authorization: Bearer <token>`
+- **Success Response:**
+
+```json
+{
+  "expenses": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string|null",
+      "amount": "number",
+      "category_id": "integer",
+      "category_name": "string",
+      "expense_date": "YYYY-MM-DD",
+      "expense_time": "HH:MM:SS",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ]
+}
+```
+
+### Update Expense
+
+- **Endpoint:** `PUT /api/expenses/:id`
+- **Headers:** `Authorization: Bearer <token>`
+- **Payload:**
+
+```json
+{
+  "title": "string",
+  "description": "string|null",
+  "amount": "number (>0)",
+  "category_id": "integer",
+  "expense_date": "YYYY-MM-DD",
+  "expense_time": "HH:MM:SS"
+}
+```
+
+- **Success Response:**
+
+```json
+{
+  "message": "Expense updated successfully."
+}
+```
+
+- **Error Responses:**
+  - 400: `{ "error": "Invalid expense data" }`
+  - 404: `{ "error": "Expense not found" }`
+
+### Delete Expense
+
+- **Endpoint:** `DELETE /api/expenses/:id`
+- **Headers:** `Authorization: Bearer <token>`
+- **Success Response:**
 
 ```json
 {
@@ -338,130 +230,30 @@ This document describes all API routes, their payloads, and responses for the Ex
 }
 ```
 
-**Error Responses:**
+- **Error Responses:**
+  - 404: `{ "error": "Expense not found" }`
 
-- **Status:** 404 Not Found
+---
+
+## Error Response Format
+
+All error responses follow this format:
 
 ```json
 {
-  "error": "Expense not found"
+  "error": "Error message here"
 }
 ```
 
 ---
 
-## 9. Delete Category
+## Notes
 
-**Endpoint:** `DELETE /api/categories/{id}`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "message": "Category deleted successfully."
-}
-```
-
-**Error Responses:**
-
-- **Status:** 404 Not Found
-
-```json
-{
-  "error": "Category not found"
-}
-```
-
----
-
-## 10. Update User Profile
-
-**Endpoint:** `PUT /api/profile`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Payload:**
-
-```json
-{
-  "name": "string",
-  "profile_image": "string|null"
-}
-```
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "message": "Profile updated successfully.",
-  "user": {
-    "id": "uuid",
-    "name": "string",
-    "email": "string",
-    "profile_image": "string|null",
-    "created_at": "timestamp",
-    "updated_at": "timestamp",
-    "is_active": true,
-    "deactivated_at": "timestamp|null"
-  }
-}
-```
-
-**Error Responses:**
-
-- **Status:** 400 Bad Request
-
-```json
-{
-  "error": "Invalid profile data"
-}
-```
-
----
-
-## 11. Deactivate User
-
-**Endpoint:** `POST /api/deactivate`
-
-**Headers:**
-
-- `Authorization: Bearer <token>`
-
-**Success Response:**
-
-- **Status:** 200 OK
-
-```json
-{
-  "message": "User deactivated successfully."
-}
-```
-
-**Error Responses:**
-
-- **Status:** 404 Not Found
-
-```json
-{
-  "error": "User not found"
-}
-```
-
----
-
-## 12. Reactivate User
-
-**Endpoint:** `POST /api/reactivate`
+- All protected routes require a valid JWT token in the `Authorization` header.
+- Timestamps are in ISO 8601 format.
+- All IDs are UUIDs unless otherwise specified.
+- Default categories are created automatically for new users.
+  **Endpoint:** `POST /api/reactivate`
 
 **Headers:**
 
