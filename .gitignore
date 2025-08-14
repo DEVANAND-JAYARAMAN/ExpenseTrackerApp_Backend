@@ -1,0 +1,42 @@
+# Go build and cache
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories
+/vendor/
+
+# Go workspace file
+go.work
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+# .env
+# config.env
+
+# Docker artifacts
+*.log
+docker-compose.override.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage/test
+coverage*
+*.coverprofile
+
+# Misc
+*.bak
+*.tmp
