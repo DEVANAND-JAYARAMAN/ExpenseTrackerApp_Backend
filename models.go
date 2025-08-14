@@ -36,8 +36,8 @@ type Expense struct {
 	Title       string    `json:"title" db:"title"`
 	Description *string   `json:"description,omitempty" db:"description"`
 	Amount      float64   `json:"amount" db:"amount"`
-	ExpenseDate time.Time `json:"expense_date" db:"expense_date"`
-	ExpenseTime time.Time `json:"expense_time" db:"expense_time"`
+	ExpenseDate string `json:"expense_date" db:"expense_date"`
+	ExpenseTime string `json:"expense_time" db:"expense_time"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }

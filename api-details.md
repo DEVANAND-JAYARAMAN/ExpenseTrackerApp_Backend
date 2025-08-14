@@ -204,8 +204,8 @@ Request
   "title": "string",
   "description": "string|null",
   "amount": "number",
-  "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM",
+  "expense_date": "DD-MM-YYYY",
+  "expense_time": "HH:MM AM/PM",
   "categories": ["uuid1", "uuid2", ...]
 }
 ```
@@ -221,8 +221,8 @@ Success 201
     "title": "string",
     "description": "string|null",
     "amount": "number",
-    "expense_date": "YYYY-MM-DD",
-    "expense_time": "HH:MM",
+    "expense_date": "DD-MM-YYYY",
+    "expense_time": "HH:MM AM/PM",
     "created_at": "timestamp",
     "updated_at": "timestamp",
     "categories": [
@@ -260,8 +260,8 @@ Success 200
       "title": "string",
       "description": "string|null",
       "amount": "number",
-      "expense_date": "YYYY-MM-DD",
-      "expense_time": "HH:MM",
+      "expense_date": "DD-MM-YYYY",
+      "expense_time": "HH:MM AM/PM",
       "created_at": "timestamp",
       "updated_at": "timestamp"
     }
@@ -280,8 +280,8 @@ Request
   "title": "string",
   "description": "string|null",
   "amount": "number",
-  "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM",
+  "expense_date": "DD-MM-YYYY",
+  "expense_time": "HH:MM AM/PM",
   "categories": ["uuid1", "uuid2", ...]
 }
 ```
@@ -297,8 +297,8 @@ Success 200
     "title": "string",
     "description": "string|null",
     "amount": "number",
-    "expense_date": "YYYY-MM-DD",
-    "expense_time": "HH:MM",
+    "expense_date": "DD-MM-YYYY",
+    "expense_time": "HH:MM AM/PM",
     "created_at": "timestamp",
     "updated_at": "timestamp",
     "categories": [
@@ -358,7 +358,7 @@ All error responses:
 ## Notes / Gaps
 
 - GetExpenses currently does not return categories array (only basic fields); create/update responses include categories list.
-- Time format required: expense_time must be HH:MM (no seconds).
+  -- Time format required: expense_time must be HH:MM AM/PM (12-hour, no seconds).
 - UpdateExpense response leaves created_at blank (future improvement: fetch from DB).
 - JWT expiration set to 30 days in code.
 - Provide JWT_SECRET via environment variable in production.

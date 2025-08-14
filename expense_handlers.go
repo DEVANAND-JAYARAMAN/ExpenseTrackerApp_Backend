@@ -303,14 +303,14 @@ func validateUpdateExpenseRequest(req UpdateExpenseRequest) error {
 }
 
 func parseDateTime(dateStr, timeStr string) (time.Time, time.Time, error) {
-	// Parse date (YYYY-MM-DD)
-	expenseDate, err := time.Parse("2006-01-02", dateStr)
+	// Parse date (DD-MM-YYYY)
+	expenseDate, err := time.Parse("02-01-2006", dateStr)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
 
-	// Parse time (HH:MM)
-	expenseTime, err := time.Parse("15:04", timeStr)
+	// Parse time (HH:MM AM/PM)
+	expenseTime, err := time.Parse("03:04 PM", timeStr)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
@@ -334,39 +334,79 @@ func (h *ExpenseHandler) expenseExistsForUser(expenseID, userID uuid.UUID) (bool
 }
 
 func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
-	query := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
-	
-	rows, err := h.db.Query(query, userID)
+	// Fetch base expense rows
+	baseQuery := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
+	rows, err := h.db.Query(baseQuery, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var expenses []map[string]interface{}
+	expenses := make([]map[string]interface{}, 0)
+	idOrder := make([]uuid.UUID, 0)
+	indexByID := make(map[uuid.UUID]int)
+
 	for rows.Next() {
-		var id, userID uuid.UUID
+		var expID, uID uuid.UUID
 		var title, description string
 		var amount float64
 		var expenseDate, expenseTime, createdAt, updatedAt time.Time
-
-		err := rows.Scan(&id, &userID, &title, &description, &amount, &expenseDate, &expenseTime, &createdAt, &updatedAt)
-		if err != nil {
+		if err := rows.Scan(&expID, &uID, &title, &description, &amount, &expenseDate, &expenseTime, &createdAt, &updatedAt); err != nil {
 			return nil, err
 		}
-
-		expense := map[string]interface{}{
-			"id":           id,
-			"user_id":      userID,
+		expMap := map[string]interface{}{
+			"id":           expID,
+			"user_id":      uID,
 			"title":        title,
 			"description":  description,
 			"amount":       amount,
-			"expense_date": expenseDate.Format("2006-01-02"),
-			"expense_time": expenseTime.Format("15:04"),
-			"created_at":   createdAt,
-			"updated_at":   updatedAt,
+			"expense_date": expenseDate.Format("02-01-2006"),
+			"expense_time": expenseTime.Format("03:04 PM"),
+			"created_at":   createdAt.Format("02-01-2006 03:04:05 PM"),
+			"updated_at":   updatedAt.Format("02-01-2006 03:04:05 PM"),
+			"categories":   []map[string]interface{}{},
 		}
+		indexByID[expID] = len(expenses)
+		idOrder = append(idOrder, expID)
+		expenses = append(expenses, expMap)
+	}
 
-		expenses = append(expenses, expense)
+	if len(idOrder) == 0 {
+		return expenses, nil
+	}
+
+	// Build dynamic IN clause for categories
+	placeholders := make([]string, len(idOrder))
+	args := make([]interface{}, len(idOrder))
+	for i, id := range idOrder {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	catQuery := fmt.Sprintf(`SELECT ec.expense_id, c.id, c.name, c.is_default FROM expense_categories ec JOIN categories c ON c.id = ec.category_id WHERE ec.expense_id IN (%s) ORDER BY c.name ASC`, strings.Join(placeholders, ","))
+
+	catRows, err := h.db.Query(catQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer catRows.Close()
+
+	for catRows.Next() {
+		var expID, catID uuid.UUID
+		var catName string
+		var isDefault bool
+		if err := catRows.Scan(&expID, &catID, &catName, &isDefault); err != nil {
+			return nil, err
+		}
+		if idx, ok := indexByID[expID]; ok {
+			expense := expenses[idx]
+			cats := expense["categories"].([]map[string]interface{})
+			cats = append(cats, map[string]interface{}{
+				"id":         catID,
+				"name":       catName,
+				"is_default": isDefault,
+			})
+			expense["categories"] = cats
+		}
 	}
 
 	return expenses, nil
