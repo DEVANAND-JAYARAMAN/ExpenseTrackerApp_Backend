@@ -145,10 +145,10 @@ This document describes all API routes, payloads, and responses for the Expense 
 {
   "title": "string",
   "description": "string|null",
-  "amount": "number (>0)",
-  "category_id": "integer",
+  "amount": "number",
   "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM:SS"
+  "expense_time": "HH:MM:SS",
+  "categories": ["uuid1", "uuid2", ...]
 }
 ```
 
@@ -156,8 +156,30 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ```json
 {
-  "message": "Expense added successfully.",
-  "expense_id": "uuid"
+  "message": "Expense created successfully.",
+  "expense": {
+    "id": "uuid",
+    "user_id": "uuid",
+    "title": "string",
+    "description": "string|null",
+    "amount": "number",
+    "expense_date": "YYYY-MM-DD",
+    "expense_time": "HH:MM:SS",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "categories": [
+      {
+        "id": "uuid1",
+        "name": "string",
+        "is_default": false
+      },
+      {
+        "id": "uuid2",
+        "name": "string",
+        "is_default": false
+      }
+    ]
+  }
 }
 ```
 
@@ -199,10 +221,10 @@ This document describes all API routes, payloads, and responses for the Expense 
 {
   "title": "string",
   "description": "string|null",
-  "amount": "number (>0)",
-  "category_id": "integer",
+  "amount": "number",
   "expense_date": "YYYY-MM-DD",
-  "expense_time": "HH:MM:SS"
+  "expense_time": "HH:MM:SS",
+  "categories": ["uuid1", "uuid2", ...]
 }
 ```
 
@@ -210,7 +232,30 @@ This document describes all API routes, payloads, and responses for the Expense 
 
 ```json
 {
-  "message": "Expense updated successfully."
+  "message": "Expense updated successfully.",
+  "expense": {
+    "id": "uuid",
+    "user_id": "uuid",
+    "title": "string",
+    "description": "string|null",
+    "amount": "number",
+    "expense_date": "YYYY-MM-DD",
+    "expense_time": "HH:MM:SS",
+    "created_at": "timestamp",
+    "updated_at": "timestamp",
+    "categories": [
+      {
+        "id": "uuid1",
+        "name": "string",
+        "is_default": false
+      },
+      {
+        "id": "uuid2",
+        "name": "string",
+        "is_default": false
+      }
+    ]
+  }
 }
 ```
 
