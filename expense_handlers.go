@@ -44,11 +44,11 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 		})
 	}
 
-	// Get or create category
-	categoryID, err := h.getOrCreateCategory(userID, req.CategoryName)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: fmt.Sprintf("Failed to handle category: %v", err),
+	// Validate category ID
+	categoryName, exists := GetCategoryName(req.CategoryID)
+	if !exists {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: "Invalid category ID",
 		})
 	}
 
@@ -62,7 +62,7 @@ func (h *ExpenseHandler) AddExpense(c echo.Context) error {
 
 	// Create expense
 	expenseID := uuid.New()
-	err = h.createExpense(expenseID, userID, req.Title, req.Description, req.Amount, categoryID, expenseDate, expenseTime)
+	err = h.createExpense(expenseID, userID, req.Title, req.Description, req.Amount, req.CategoryID, categoryName, expenseDate, expenseTime)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: fmt.Sprintf("Failed to create expense: %v", err),
@@ -118,11 +118,11 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
-	// Get or create category
-	categoryID, err := h.getOrCreateCategory(userID, req.CategoryName)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: fmt.Sprintf("Failed to handle category: %v", err),
+	// Validate category ID
+	categoryName, exists := GetCategoryName(req.CategoryID)
+	if !exists {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: "Invalid category ID",
 		})
 	}
 
@@ -135,7 +135,7 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 	}
 
 	// Update expense
-	err = h.updateExpense(expenseID, req.Title, req.Description, req.Amount, categoryID, expenseDate, expenseTime)
+	err = h.updateExpense(expenseID, req.Title, req.Description, req.Amount, req.CategoryID, categoryName, expenseDate, expenseTime)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to update expense",
@@ -189,7 +189,7 @@ func (h *ExpenseHandler) DeleteExpense(c echo.Context) error {
 	})
 }
 
-// GetExpenses handles getting all expenses for a user (for debugging)
+// GetExpenses handles getting all expenses for a user
 func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
@@ -206,8 +206,8 @@ func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "Expenses retrieved successfully",
-		"count":   len(expenses),
+		"message":  "Expenses retrieved successfully",
+		"count":    len(expenses),
 		"expenses": expenses,
 	})
 }
@@ -221,8 +221,8 @@ func validateAddExpenseRequest(req AddExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if strings.TrimSpace(req.CategoryName) == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category name is required")
+	if req.CategoryID <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")
@@ -240,8 +240,8 @@ func validateUpdateExpenseRequest(req UpdateExpenseRequest) error {
 	if req.Amount <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Amount must be greater than 0")
 	}
-	if strings.TrimSpace(req.CategoryName) == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category name is required")
+	if req.CategoryID <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "Category ID is required")
 	}
 	if strings.TrimSpace(req.ExpenseDate) == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Expense date is required")
@@ -268,43 +268,27 @@ func parseDateTime(dateStr, timeStr string) (time.Time, time.Time, error) {
 	return expenseDate, expenseTime, nil
 }
 
-func (h *ExpenseHandler) createExpense(id, userID uuid.UUID, title string, description *string, amount float64, categoryID uuid.UUID, expenseDate, expenseTime time.Time) error {
+func (h *ExpenseHandler) createExpense(id, userID uuid.UUID, title string, description *string, amount float64, categoryID int, categoryName string, expenseDate, expenseTime time.Time) error {
 	query := `
-		INSERT INTO expenses (id, user_id, title, description, amount, expense_date, expense_time, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO expenses (id, user_id, title, description, amount, category_id, category_name, expense_date, expense_time, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	now := time.Now()
-	_, err := h.db.Exec(query, id, userID, title, description, amount, expenseDate, expenseTime, now, now)
-	if err != nil {
-		return err
-	}
-
-	// Link expense to category
-	return h.linkExpenseToCategory(id, categoryID)
+	_, err := h.db.Exec(query, id, userID, title, description, amount, categoryID, categoryName, expenseDate, expenseTime, now, now)
+	return err
 }
 
-func (h *ExpenseHandler) updateExpense(id uuid.UUID, title string, description *string, amount float64, categoryID uuid.UUID, expenseDate, expenseTime time.Time) error {
+func (h *ExpenseHandler) updateExpense(id uuid.UUID, title string, description *string, amount float64, categoryID int, categoryName string, expenseDate, expenseTime time.Time) error {
 	query := `
 		UPDATE expenses 
-		SET title = $2, description = $3, amount = $4, expense_date = $5, expense_time = $6, updated_at = $7
+		SET title = $2, description = $3, amount = $4, category_id = $5, category_name = $6, expense_date = $7, expense_time = $8, updated_at = $9
 		WHERE id = $1
 	`
-	_, err := h.db.Exec(query, id, title, description, amount, expenseDate, expenseTime, time.Now())
-	if err != nil {
-		return err
-	}
-
-	// Update category link
-	return h.updateExpenseCategory(id, categoryID)
+	_, err := h.db.Exec(query, id, title, description, amount, categoryID, categoryName, expenseDate, expenseTime, time.Now())
+	return err
 }
 
 func (h *ExpenseHandler) deleteExpense(id uuid.UUID) error {
-	// Delete category link first
-	if err := h.deleteExpenseCategory(id); err != nil {
-		return err
-	}
-
-	// Delete expense
 	query := `DELETE FROM expenses WHERE id = $1`
 	_, err := h.db.Exec(query, id)
 	return err
@@ -317,27 +301,8 @@ func (h *ExpenseHandler) expenseExistsForUser(expenseID, userID uuid.UUID) (bool
 	return exists, err
 }
 
-func (h *ExpenseHandler) linkExpenseToCategory(expenseID, categoryID uuid.UUID) error {
-	query := `INSERT INTO expense_categories (id, expense_id, category_id) VALUES ($1, $2, $3)`
-	_, err := h.db.Exec(query, uuid.New(), expenseID, categoryID)
-	return err
-}
-
-func (h *ExpenseHandler) updateExpenseCategory(expenseID, categoryID uuid.UUID) error {
-	query := `UPDATE expense_categories SET category_id = $2 WHERE expense_id = $1`
-	_, err := h.db.Exec(query, expenseID, categoryID)
-	return err
-}
-
-func (h *ExpenseHandler) deleteExpenseCategory(expenseID uuid.UUID) error {
-	query := `DELETE FROM expense_categories WHERE expense_id = $1`
-	_, err := h.db.Exec(query, expenseID)
-	return err
-}
-
-// getUserExpenses gets all expenses for a user
-func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]Expense, error) {
-	query := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
+func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
+	query := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, category_id, category_name, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
 	
 	rows, err := h.db.Query(query, userID)
 	if err != nil {
@@ -345,55 +310,35 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]Expense, error) {
 	}
 	defer rows.Close()
 
-	var expenses []Expense
+	var expenses []map[string]interface{}
 	for rows.Next() {
-		var expense Expense
-		var description string
-		err := rows.Scan(
-			&expense.ID, &expense.UserID, &expense.Title, &description,
-			&expense.Amount, &expense.ExpenseDate, &expense.ExpenseTime,
-			&expense.CreatedAt, &expense.UpdatedAt,
-		)
+		var id, userID uuid.UUID
+		var title, description, categoryName string
+		var amount float64
+		var categoryID int
+		var expenseDate, expenseTime, createdAt, updatedAt time.Time
+
+		err := rows.Scan(&id, &userID, &title, &description, &amount, &categoryID, &categoryName, &expenseDate, &expenseTime, &createdAt, &updatedAt)
 		if err != nil {
 			return nil, err
 		}
-		
-		// Handle description
-		if description != "" {
-			expense.Description = &description
+
+		expense := map[string]interface{}{
+			"id":            id,
+			"user_id":       userID,
+			"title":         title,
+			"description":   description,
+			"amount":        amount,
+			"category_id":   categoryID,
+			"category_name": categoryName,
+			"expense_date":  expenseDate.Format("2006-01-02"),
+			"expense_time":  expenseTime.Format("15:04"),
+			"created_at":    createdAt,
+			"updated_at":    updatedAt,
 		}
-		
+
 		expenses = append(expenses, expense)
 	}
 
 	return expenses, nil
-}
-
-// getOrCreateCategory gets existing category or creates new one
-func (h *ExpenseHandler) getOrCreateCategory(userID uuid.UUID, categoryName string) (uuid.UUID, error) {
-	// First, try to find existing category (default or user-owned)
-	var categoryID uuid.UUID
-	query := `SELECT id FROM categories WHERE LOWER(name) = LOWER($1) AND (is_default = true OR user_id = $2) LIMIT 1`
-	err := h.db.QueryRow(query, categoryName, userID).Scan(&categoryID)
-	
-	if err == nil {
-		// Category exists, return it
-		return categoryID, nil
-	}
-	
-	if err != sql.ErrNoRows {
-		// Database error
-		return uuid.Nil, err
-	}
-	
-	// Category doesn't exist, create new one
-	categoryID = uuid.New()
-	now := time.Now()
-	createQuery := `INSERT INTO categories (id, name, user_id, is_default, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err = h.db.Exec(createQuery, categoryID, categoryName, userID, false, now, now)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	
-	return categoryID, nil
 }

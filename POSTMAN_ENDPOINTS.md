@@ -79,7 +79,7 @@
   "title": "Groceries",
   "description": "Monthly grocery shopping",
   "amount": 2200.50,
-  "category_name": "Food",
+  "category_id": 1,
   "expense_date": "2025-08-06",
   "expense_time": "19:30"
 }
@@ -114,7 +114,7 @@
   "title": "Groceries Updated",
   "description": "Updated grocery note",
   "amount": 2100,
-  "category_name": "Food",
+  "category_id": 1,
   "expense_date": "2025-08-06",
   "expense_time": "20:00"
 }
@@ -166,20 +166,16 @@
 {
   "message": "Categories retrieved successfully",
   "categories": [
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "name": "Food",
-      "is_default": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174001",
-      "name": "Transportation",
-      "is_default": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
+    {"id": 1, "name": "Food"},
+    {"id": 2, "name": "Transportation"},
+    {"id": 3, "name": "Entertainment"},
+    {"id": 4, "name": "Shopping"},
+    {"id": 5, "name": "Bills"},
+    {"id": 6, "name": "Fuel"},
+    {"id": 7, "name": "School_Fees"},
+    {"id": 8, "name": "Medical"},
+    {"id": 9, "name": "Rent"},
+    {"id": 10, "name": "Utilities"}
   ]
 }
 ```

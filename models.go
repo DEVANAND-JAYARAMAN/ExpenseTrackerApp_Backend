@@ -94,22 +94,22 @@ type LoginResponse struct {
 
 // AddExpenseRequest represents the request payload for adding an expense
 type AddExpenseRequest struct {
-	Title        string  `json:"title" validate:"required"`
-	Description  *string `json:"description,omitempty"`
-	Amount       float64 `json:"amount" validate:"required,gt=0"`
-	CategoryName string  `json:"category_name" validate:"required"`
-	ExpenseDate  string  `json:"expense_date" validate:"required"`
-	ExpenseTime  string  `json:"expense_time" validate:"required"`
+	Title       string  `json:"title" validate:"required"`
+	Description *string `json:"description,omitempty"`
+	Amount      float64 `json:"amount" validate:"required,gt=0"`
+	CategoryID  int     `json:"category_id" validate:"required"`
+	ExpenseDate string  `json:"expense_date" validate:"required"`
+	ExpenseTime string  `json:"expense_time" validate:"required"`
 }
 
 // UpdateExpenseRequest represents the request payload for updating an expense
 type UpdateExpenseRequest struct {
-	Title        string  `json:"title" validate:"required"`
-	Description  *string `json:"description,omitempty"`
-	Amount       float64 `json:"amount" validate:"required,gt=0"`
-	CategoryName string  `json:"category_name" validate:"required"`
-	ExpenseDate  string  `json:"expense_date" validate:"required"`
-	ExpenseTime  string  `json:"expense_time" validate:"required"`
+	Title       string  `json:"title" validate:"required"`
+	Description *string `json:"description,omitempty"`
+	Amount      float64 `json:"amount" validate:"required,gt=0"`
+	CategoryID  int     `json:"category_id" validate:"required"`
+	ExpenseDate string  `json:"expense_date" validate:"required"`
+	ExpenseTime string  `json:"expense_time" validate:"required"`
 }
 
 // AddExpenseResponse represents the response for successful expense addition

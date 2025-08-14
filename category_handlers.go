@@ -29,12 +29,7 @@ func (h *CategoryHandler) GetCategories(c echo.Context) error {
 		})
 	}
 
-	categories, err := h.getAllCategories(userID)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to get categories",
-		})
-	}
+	categories := GetAllCategories()
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message":    "Categories retrieved successfully",
