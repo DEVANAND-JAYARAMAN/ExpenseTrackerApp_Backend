@@ -102,15 +102,13 @@ func createAllTables(db *sql.DB) error {
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
-	-- EXPENSES TABLE
+	-- EXPENSES TABLE (legacy category_id/name removed; multi-category via expense_categories)
 	CREATE TABLE IF NOT EXISTS expenses (
 		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
 		title VARCHAR(255) NOT NULL,
 		description TEXT,
 		amount DECIMAL(10, 2) NOT NULL,
-		category_id INTEGER NOT NULL,
-		category_name VARCHAR(255) NOT NULL,
 		expense_date DATE NOT NULL,
 		expense_time TIME NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

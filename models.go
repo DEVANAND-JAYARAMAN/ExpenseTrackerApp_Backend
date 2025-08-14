@@ -153,13 +153,22 @@ type DeleteExpenseResponse struct {
 
 // CreateCategoryRequest represents the request payload for creating a category
 type CreateCategoryRequest struct {
-	Name string `json:"name" validate:"required,min=2,max=255"`
+	Name      string `json:"name" validate:"required,min=2,max=255"`
+	IsDefault bool   `json:"is_default"`
+}
+
+// UpdateCategoryRequest represents payload for updating a category
+type UpdateCategoryRequest struct {
+	Name      string `json:"name" validate:"required,min=2,max=255"`
+	IsDefault bool   `json:"is_default"`
 }
 
 // CreateCategoryResponse represents the response for successful category creation
 type CreateCategoryResponse struct {
 	Message    string    `json:"message"`
 	CategoryID uuid.UUID `json:"category_id"`
+	Name       string    `json:"name,omitempty"`
+	IsDefault  bool      `json:"is_default,omitempty"`
 }
 
 // ErrorResponse represents an error response

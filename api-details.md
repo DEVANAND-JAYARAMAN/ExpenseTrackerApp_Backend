@@ -130,7 +130,8 @@ Request
 
 ```json
 {
-  "name": "string (2-255 chars)"
+  "name": "string (2-255 chars)",
+  "is_default": false
 }
 ```
 
@@ -139,7 +140,9 @@ Success 201
 ```json
 {
   "message": "Category created successfully.",
-  "category_id": "uuid"
+  "category_id": "uuid",
+  "name": "string",
+  "is_default": false
 }
 ```
 
@@ -152,11 +155,11 @@ Errors
 
 PUT /api/categories/:id
 
-Request (only name allowed)
-{ "name": "string" }
+Request
+{ "name": "string", "is_default": false }
 
 Success 200
-{ "message": "Category updated successfully", "category_id": "uuid", "name": "string" }
+{ "message": "Category updated successfully", "category_id": "uuid", "name": "string", "is_default": false }
 
 Errors
 
@@ -257,8 +260,6 @@ Success 200
       "title": "string",
       "description": "string|null",
       "amount": "number",
-      "category_id": "integer",
-      "category_name": "string",
       "expense_date": "YYYY-MM-DD",
       "expense_time": "HH:MM",
       "created_at": "timestamp",
@@ -356,7 +357,7 @@ All error responses:
 
 ## Notes / Gaps
 
-- GetExpenses still returns legacy single category_id/category_name while create/update support multiple categories.
+- GetExpenses currently does not return categories array (only basic fields); create/update responses include categories list.
 - Time format required: expense_time must be HH:MM (no seconds).
 - UpdateExpense response leaves created_at blank (future improvement: fetch from DB).
 - JWT expiration set to 30 days in code.

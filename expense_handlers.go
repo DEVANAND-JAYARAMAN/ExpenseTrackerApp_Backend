@@ -318,25 +318,7 @@ func parseDateTime(dateStr, timeStr string) (time.Time, time.Time, error) {
 	return expenseDate, expenseTime, nil
 }
 
-func (h *ExpenseHandler) createExpense(id, userID uuid.UUID, title string, description *string, amount float64, categoryID int, categoryName string, expenseDate, expenseTime time.Time) error {
-	query := `
-		INSERT INTO expenses (id, user_id, title, description, amount, category_id, category_name, expense_date, expense_time, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`
-	now := time.Now()
-	_, err := h.db.Exec(query, id, userID, title, description, amount, categoryID, categoryName, expenseDate, expenseTime, now, now)
-	return err
-}
-
-func (h *ExpenseHandler) updateExpense(id uuid.UUID, title string, description *string, amount float64, categoryID int, categoryName string, expenseDate, expenseTime time.Time) error {
-	query := `
-		UPDATE expenses 
-		SET title = $2, description = $3, amount = $4, category_id = $5, category_name = $6, expense_date = $7, expense_time = $8, updated_at = $9
-		WHERE id = $1
-	`
-	_, err := h.db.Exec(query, id, title, description, amount, categoryID, categoryName, expenseDate, expenseTime, time.Now())
-	return err
-}
+// createExpense / updateExpense legacy helpers removed (multi-category handled separately)
 
 func (h *ExpenseHandler) deleteExpense(id uuid.UUID) error {
 	query := `DELETE FROM expenses WHERE id = $1`
@@ -352,7 +334,7 @@ func (h *ExpenseHandler) expenseExistsForUser(expenseID, userID uuid.UUID) (bool
 }
 
 func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
-	query := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, category_id, category_name, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
+	query := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
 	
 	rows, err := h.db.Query(query, userID)
 	if err != nil {
@@ -363,28 +345,25 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interfa
 	var expenses []map[string]interface{}
 	for rows.Next() {
 		var id, userID uuid.UUID
-		var title, description, categoryName string
+		var title, description string
 		var amount float64
-		var categoryID int
 		var expenseDate, expenseTime, createdAt, updatedAt time.Time
 
-		err := rows.Scan(&id, &userID, &title, &description, &amount, &categoryID, &categoryName, &expenseDate, &expenseTime, &createdAt, &updatedAt)
+		err := rows.Scan(&id, &userID, &title, &description, &amount, &expenseDate, &expenseTime, &createdAt, &updatedAt)
 		if err != nil {
 			return nil, err
 		}
 
 		expense := map[string]interface{}{
-			"id":            id,
-			"user_id":       userID,
-			"title":         title,
-			"description":   description,
-			"amount":        amount,
-			"category_id":   categoryID,
-			"category_name": categoryName,
-			"expense_date":  expenseDate.Format("2006-01-02"),
-			"expense_time":  expenseTime.Format("15:04"),
-			"created_at":    createdAt,
-			"updated_at":    updatedAt,
+			"id":           id,
+			"user_id":      userID,
+			"title":        title,
+			"description":  description,
+			"amount":       amount,
+			"expense_date": expenseDate.Format("2006-01-02"),
+			"expense_time": expenseTime.Format("15:04"),
+			"created_at":   createdAt,
+			"updated_at":   updatedAt,
 		}
 
 		expenses = append(expenses, expense)

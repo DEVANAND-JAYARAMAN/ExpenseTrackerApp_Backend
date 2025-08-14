@@ -119,9 +119,11 @@ func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 		})
 	}
 
-	// Create new category
+	// Create new category with requested flag
 	categoryID := uuid.New()
-	err := h.createCategory(categoryID, userID, req.Name)
+	isDefault := req.IsDefault
+	// If is_default true but user-specific, we still store user_id (user private default)
+	err := h.createCategoryWithFlag(categoryID, userID, req.Name, isDefault)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: "Failed to create category",
@@ -131,6 +133,8 @@ func (h *CategoryHandler) CreateCategory(c echo.Context) error {
 	return c.JSON(http.StatusCreated, CreateCategoryResponse{
 		Message:    "Category created successfully",
 		CategoryID: categoryID,
+		Name:       req.Name,
+		IsDefault:  isDefault,
 	})
 }
 
@@ -143,10 +147,14 @@ func (h *CategoryHandler) categoryExists(userID uuid.UUID, name string) bool {
 }
 
 // createCategory creates a new user-specific category
-func (h *CategoryHandler) createCategory(id, userID uuid.UUID, name string) error {
+func (h *CategoryHandler) createCategory(id, userID uuid.UUID, name string) error { // legacy wrapper
+	return h.createCategoryWithFlag(id, userID, name, false)
+}
+
+func (h *CategoryHandler) createCategoryWithFlag(id, userID uuid.UUID, name string, isDefault bool) error {
 	query := `INSERT INTO categories (id, name, user_id, is_default, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`
 	now := time.Now()
-	_, err := h.db.Exec(query, id, name, userID, false, now, now)
+	_, err := h.db.Exec(query, id, name, userID, isDefault, now, now)
 	return err
 }
 
@@ -162,7 +170,7 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid category ID"})
 	}
 
-	var req CreateCategoryRequest // reuse struct for name
+	var req UpdateCategoryRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
 	}
@@ -183,7 +191,7 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 		return c.JSON(http.StatusForbidden, ErrorResponse{Error: "Cannot update this category"})
 	}
 
-	_, err = h.db.Exec(`UPDATE categories SET name = $1, updated_at = $2 WHERE id = $3`, req.Name, time.Now(), catID)
+	_, err = h.db.Exec(`UPDATE categories SET name = $1, is_default = $2, updated_at = $3 WHERE id = $4`, req.Name, req.IsDefault, time.Now(), catID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update category"})
 	}
@@ -192,6 +200,7 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context) error {
 		"message":     "Category updated successfully",
 		"category_id": catID,
 		"name":        req.Name,
+		"is_default":  req.IsDefault,
 	})
 }
 
