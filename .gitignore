@@ -22,8 +22,8 @@ go.work
 *.swo
 
 # Environment files
-# .env
-# config.env
+.env
+config.env
 
 # Docker artifacts
 *.log
