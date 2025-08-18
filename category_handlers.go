@@ -54,7 +54,7 @@ func (h *CategoryHandler) getAllCategories(userID uuid.UUID) ([]Category, error)
 	query := `
 		SELECT id, name, user_id, is_default, created_at, updated_at 
 		FROM categories 
-		WHERE is_default = true OR user_id = $1 
+		WHERE is_default = true AND user_id = $1 
 		ORDER BY is_default DESC, name ASC
 	`
 
