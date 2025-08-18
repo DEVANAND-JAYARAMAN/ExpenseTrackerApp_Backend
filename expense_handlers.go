@@ -239,8 +239,9 @@ func (h *ExpenseHandler) DeleteExpense(c echo.Context) error {
 	})
 }
 
-// GetExpenses handles getting all expenses for a user
+// GetExpenses handles getting all expenses for a user ordered by date DESC
 func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
+	// Extract user ID from JWT token in request context
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{
@@ -248,6 +249,7 @@ func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 		})
 	}
 
+	// Fetch all expenses for the authenticated user
 	expenses, err := h.getUserExpenses(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -255,6 +257,7 @@ func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 		})
 	}
 
+	// Return expenses list with count and success message
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message":  "Expenses retrieved successfully",
 		"count":    len(expenses),
@@ -334,7 +337,7 @@ func (h *ExpenseHandler) expenseExistsForUser(expenseID, userID uuid.UUID) (bool
 }
 
 func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
-	// Fetch base expense rows
+	// Fetch base expense rows ordered by creation date (newest first)
 	baseQuery := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
 	rows, err := h.db.Query(baseQuery, userID)
 	if err != nil {
