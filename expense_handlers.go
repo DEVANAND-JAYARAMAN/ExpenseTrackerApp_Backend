@@ -562,6 +562,66 @@ func (h *ExpenseHandler) attachCategoriesToExpenses(expenses []map[string]interf
 	return nil
 }
 
+// GetMonthlyExpenseSummary handles getting monthly expense totals for chart display
+func (h *ExpenseHandler) GetMonthlyExpenseSummary(c echo.Context) error {
+	// Verify user authentication
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Get monthly summary data from database
+	summary, err := h.getMonthlyExpenseSummary(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to get monthly summary: %v", err),
+		})
+	}
+
+	// Return summary data directly as array
+	return c.JSON(http.StatusOK, summary)
+}
+
+// getMonthlyExpenseSummary aggregates expenses by month for the user
+func (h *ExpenseHandler) getMonthlyExpenseSummary(userID uuid.UUID) ([]map[string]interface{}, error) {
+	// SQL query to group expenses by month and sum amounts
+	query := `
+		SELECT 
+			TO_CHAR(expense_date, 'Mon YYYY') as month,
+			SUM(amount) as total
+		FROM expenses 
+		WHERE user_id = $1 
+		GROUP BY TO_CHAR(expense_date, 'YYYY-MM'), TO_CHAR(expense_date, 'Mon YYYY')
+		ORDER BY TO_CHAR(expense_date, 'YYYY-MM') DESC
+	`
+
+	rows, err := h.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Build response array with month and total pairs
+	summary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var month string
+		var total float64
+		if err := rows.Scan(&month, &total); err != nil {
+			return nil, err
+		}
+		
+		// Add formatted entry to summary
+		summary = append(summary, map[string]interface{}{
+			"month": month,
+			"total": total,
+		})
+	}
+
+	return summary, nil
+}
+
 // getUserExpenses retrieves all expenses for a user (backward compatibility)
 func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
 	// Use the new filtering function with empty filters for backward compatibility

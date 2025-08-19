@@ -65,20 +65,20 @@ The app automatically creates these tables when you first run it:
 
 ### User Management
 
-#### 1. Create Account (Register)
+#### Create Account (Register)
 - **Endpoint**: `POST /api/register`
 - **What it does**: Creates a new user account
 - **When to use**: First time using the app
 - **Example**: Sign up with your name, email, and password
 
-#### 2. Login
+#### Login
 - **Endpoint**: `POST /api/login`
 - **What it does**: Logs you into your account and gives you a security token + session ID
 - **When to use**: Every time you want to access your expenses
 - **Example**: Enter your email and password to get access
 - **Returns**: JWT token and session ID for tracking
 
-#### 3. Logout
+#### Logout
 - **Endpoint**: `POST /api/logout`
 - **What it does**: Safely logs you out and deactivates your session
 - **When to use**: When you're done using the app
@@ -86,14 +86,14 @@ The app automatically creates these tables when you first run it:
 
 ### Category Management
 
-#### 4. Get Categories
+#### Get Categories
 - **Endpoint**: `GET /api/categories`
 - **What it does**: Gets all available categories for the dropdown menu
 - **When to use**: When you need to select a category for an expense
 - **Example**: Shows Food, Transportation, Entertainment, Shopping, Bills
 - **Authentication**: Requires login token
 
-#### 5. Create New Category
+#### Create New Category
 - **Endpoint**: `POST /api/categories`
 - **What it does**: Creates a new custom category when existing ones don't fit
 - **When to use**: When you need a category that doesn't exist (like "Fuel", "Medical", etc.)
@@ -102,31 +102,46 @@ The app automatically creates these tables when you first run it:
 
 ### Expense Management
 
-#### 6. Add New Expense
+#### Add New Expense
 - **Endpoint**: `POST /api/expenses`
 - **What it does**: Creates a new expense record with title, amount, category, and date/time
 - **When to use**: Every time you spend money and want to track it
 - **Example**: Record buying groceries for $50 in the "Food" category
 - **Authentication**: Requires login token
 
-#### 7. Update Expense
+#### Update Expense
 - **Endpoint**: `PUT /api/expenses/:id`
 - **What it does**: Updates an existing expense with new information
 - **When to use**: When you need to correct or modify an expense record
 - **Example**: Change the amount from $50 to $45 if you remembered the exact price
 - **Authentication**: Requires login token
 
-#### 8. Delete Expense
+#### Delete Expense
 - **Endpoint**: `DELETE /api/expenses/:id`
 - **What it does**: Permanently removes an expense record
 - **When to use**: When you accidentally added a duplicate or wrong expense
 - **Example**: Remove that coffee expense you added twice
 - **Authentication**: Requires login token
 
-### Coming Soon 🔜
-- View your expense history
-- Create and manage categories
-- Generate expense reports
+#### View Expense List
+- **Endpoint**: `GET /api/expenses`
+- **What it does**: Returns all your expenses ordered by date (newest first)
+- **When to use**: To see your complete expense history
+- **Authentication**: Requires login token
+
+#### Filter Expenses
+- **Endpoint**: `GET /api/expenses?category_id=abc&start_date=01-08-2024&end_date=31-08-2024&min_amount=50&max_amount=200`
+- **What it does**: Filters expenses by category, date range, and amount
+- **When to use**: To analyze specific spending patterns
+- **Parameters**: category_id, start_date, end_date, min_amount, max_amount (all optional)
+- **Authentication**: Requires login token
+
+#### Monthly Expense Summary
+- **Endpoint**: `GET /api/expenses/summary/monthly`
+- **What it does**: Returns monthly expense totals for chart display
+- **When to use**: To visualize spending trends over time
+- **Returns**: Array of {month: "Aug 2025", total: 1200.00}
+- **Authentication**: Requires login token
 
 ## 🧪 Testing the App
 
@@ -203,13 +218,21 @@ This is an active project. Currently implemented:
 - ✅ Add new expenses with category validation
 - ✅ Update existing expenses with ownership checks
 - ✅ Delete expenses with proper authorization
+- ✅ View expense list ordered by date
+- ✅ Filter expenses by category, date range, and amount
+- ✅ Monthly expense summary for analytics
 - ✅ JWT-based authentication for all protected routes
 - ✅ Login history tracking
 
+Recently completed:
+- ✅ View expense history and lists
+- ✅ Advanced expense filtering by category, date, and amount
+- ✅ Monthly expense summary for charts and analytics
+
 Coming next:
-- 🔄 View expense history and lists
-- 🔄 Category management
-- 🔄 Expense reporting and analytics
+- 🔄 Category-wise expense breakdown
+- 🔄 Export functionality
+- 🔄 Expense budgeting features
 
 ## 🤝 Contributing
 
