@@ -1,12 +1,12 @@
-## Expense Tracker API (Current Code Alignment)
+## Expense Tracker API (Current Code Alignment):
 
 This documentation reflects ONLY the endpoints actually implemented in the current Go code (`handlers.go`, `category_handlers.go`, `expense_handlers.go`, `main.go`). Removed any unused / stale sections (reactivate, login-history not implemented in handlers, etc.). Formats and field names match handler responses.
 
 ---
 
-## Authentication
+## Authentication:
 
-### Register
+### Register:
 
 POST /api/register
 
@@ -43,7 +43,7 @@ Errors
 - 400 Invalid request body / validation
 - 409 Email already exists
 
-### Login
+### Login:
 
 POST /api/login
 
@@ -71,7 +71,7 @@ Errors
 - 400 Invalid request body
 - 401 Email or Password is Wrong
 
-### Logout
+### Logout:
 
 POST /api/logout (Bearer token required)
 
@@ -90,9 +90,9 @@ Errors
 
 ---
 
-## Categories
+## Categories:
 
-### Get Categories
+### Get Categories:
 
 GET /api/categories (Bearer)
 
@@ -122,7 +122,7 @@ Success 200
 - The response contains all categories from the database for the user, with `is_default` as a boolean (`true` or `false`).
   Errors: 401 Unauthorized
 
-### Create Category
+### Create Category:
 
 POST /api/categories
 
@@ -151,7 +151,7 @@ Errors
 - 400 Invalid request body / validation
 - 409 Category already exists
 
-### Update Category
+### Update Category:
 
 PUT /api/categories/:id
 
@@ -168,7 +168,7 @@ Errors
 - 403 Cannot update this category
 - 404 Category not found
 
-### Delete Category
+### Delete Category:
 
 DELETE /api/categories/:id
 
@@ -191,9 +191,9 @@ Errors
 
 ---
 
-## Expenses
+## Expenses:
 
-### Add Expense
+### Add Expense:
 
 POST /api/expenses (Bearer)
 
@@ -246,7 +246,7 @@ Errors
 - 400 Missing or invalid fields / Invalid date or time format
 - 401 Unauthorized
 
-### Get Expenses
+### Get Expenses:
 
 GET /api/expenses (Bearer)
 
@@ -269,7 +269,7 @@ Success 200
 }
 ```
 
-### Update Expense
+### Update Expense:
 
 PUT /api/expenses/:id (Bearer)
 
@@ -323,7 +323,7 @@ Errors
 - 401 Unauthorized
 - 404 Expense <id> not found for user <user_id>
 
-### Delete Expense
+### Delete Expense:
 
 DELETE /api/expenses/:id (Bearer)
 
@@ -343,7 +343,7 @@ Errors
 
 ---
 
-## Error Format
+## Error Format:
 
 All error responses:
 
@@ -355,10 +355,10 @@ All error responses:
 
 ---
 
-## Notes / Gaps
+## Additional Info:
 
 - GetExpenses currently does not return categories array (only basic fields); create/update responses include categories list.
-  -- Time format required: expense_time must be HH:MM AM/PM (12-hour, no seconds).
+- Time format in expense_time must be HH:MM AM/PM (12-hour, no seconds).
 - UpdateExpense response leaves created_at blank (future improvement: fetch from DB).
 - JWT expiration set to 30 days in code.
 - Provide JWT_SECRET via environment variable in production.

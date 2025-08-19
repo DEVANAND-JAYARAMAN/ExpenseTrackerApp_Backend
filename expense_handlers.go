@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -239,7 +240,7 @@ func (h *ExpenseHandler) DeleteExpense(c echo.Context) error {
 	})
 }
 
-// GetExpenses handles getting all expenses for a user ordered by date DESC
+// GetExpenses handles getting expenses with optional filtering by category, date range, and amount
 func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 	// Extract user ID from JWT token in request context
 	userID := getUserIDFromContext(c)
@@ -249,15 +250,23 @@ func (h *ExpenseHandler) GetExpenses(c echo.Context) error {
 		})
 	}
 
-	// Fetch all expenses for the authenticated user
-	expenses, err := h.getUserExpenses(userID)
+	// Parse and validate query parameters for filtering
+	filters, err := h.parseExpenseFilters(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: err.Error(),
+		})
+	}
+
+	// Fetch expenses with applied filters
+	expenses, err := h.getUserExpensesWithFilters(userID, filters)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error: fmt.Sprintf("Failed to get expenses: %v", err),
 		})
 	}
 
-	// Return expenses list with count and success message
+	// Return filtered expenses list with count and success message
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message":  "Expenses retrieved successfully",
 		"count":    len(expenses),
@@ -336,15 +345,142 @@ func (h *ExpenseHandler) expenseExistsForUser(expenseID, userID uuid.UUID) (bool
 	return exists, err
 }
 
-func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
-	// Fetch base expense rows ordered by creation date (newest first)
-	baseQuery := `SELECT id, user_id, title, COALESCE(description, '') as description, amount, expense_date, expense_time, created_at, updated_at FROM expenses WHERE user_id = $1 ORDER BY created_at DESC`
-	rows, err := h.db.Query(baseQuery, userID)
+// ExpenseFilters holds the filtering criteria for expense queries
+type ExpenseFilters struct {
+	CategoryID *uuid.UUID
+	StartDate  *time.Time
+	EndDate    *time.Time
+	MinAmount  *float64
+	MaxAmount  *float64
+}
+
+// parseExpenseFilters extracts and validates filter parameters from query string
+func (h *ExpenseHandler) parseExpenseFilters(c echo.Context) (*ExpenseFilters, error) {
+	filters := &ExpenseFilters{}
+
+	// Parse category_id filter if provided
+	if categoryStr := c.QueryParam("category_id"); categoryStr != "" {
+		categoryID, err := uuid.Parse(categoryStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid category ID format")
+		}
+		filters.CategoryID = &categoryID
+	}
+
+	// Parse start_date filter with validation
+	if startDateStr := c.QueryParam("start_date"); startDateStr != "" {
+		startDate, err := time.Parse("02-01-2006", startDateStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format. Use dd-mm-yyyy")
+		}
+		filters.StartDate = &startDate
+	}
+
+	// Parse end_date filter with validation
+	if endDateStr := c.QueryParam("end_date"); endDateStr != "" {
+		endDate, err := time.Parse("02-01-2006", endDateStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format. Use dd-mm-yyyy")
+		}
+		filters.EndDate = &endDate
+	}
+
+	// Parse min_amount filter
+	if minAmountStr := c.QueryParam("min_amount"); minAmountStr != "" {
+		var minAmount float64
+		if _, err := fmt.Sscanf(minAmountStr, "%f", &minAmount); err != nil || minAmount < 0 {
+			return nil, fmt.Errorf("invalid min_amount value")
+		}
+		filters.MinAmount = &minAmount
+	}
+
+	// Parse max_amount filter
+	if maxAmountStr := c.QueryParam("max_amount"); maxAmountStr != "" {
+		var maxAmount float64
+		if _, err := fmt.Sscanf(maxAmountStr, "%f", &maxAmount); err != nil || maxAmount < 0 {
+			return nil, fmt.Errorf("invalid max_amount value")
+		}
+		filters.MaxAmount = &maxAmount
+	}
+
+	// Validate date range if both dates are provided
+	if filters.StartDate != nil && filters.EndDate != nil && filters.StartDate.After(*filters.EndDate) {
+		return nil, fmt.Errorf("start_date cannot be after end_date")
+	}
+
+	// Validate amount range if both amounts are provided
+	if filters.MinAmount != nil && filters.MaxAmount != nil && *filters.MinAmount > *filters.MaxAmount {
+		return nil, fmt.Errorf("min_amount cannot be greater than max_amount")
+	}
+
+	return filters, nil
+}
+
+// getUserExpensesWithFilters retrieves user expenses with applied filters
+func (h *ExpenseHandler) getUserExpensesWithFilters(userID uuid.UUID, filters *ExpenseFilters) ([]map[string]interface{}, error) {
+	// Build dynamic query based on provided filters
+	queryBuilder := strings.Builder{}
+	args := []interface{}{userID}
+	argIndex := 2
+
+	// Base query with potential JOIN for category filtering
+	if filters.CategoryID != nil {
+		queryBuilder.WriteString(`
+			SELECT DISTINCT e.id, e.user_id, e.title, COALESCE(e.description, '') as description, 
+			       e.amount, e.expense_date, e.expense_time, e.created_at, e.updated_at 
+			FROM expenses e 
+			JOIN expense_categories ec ON e.id = ec.expense_id 
+			WHERE e.user_id = $1`)
+	} else {
+		queryBuilder.WriteString(`
+			SELECT e.id, e.user_id, e.title, COALESCE(e.description, '') as description, 
+			       e.amount, e.expense_date, e.expense_time, e.created_at, e.updated_at 
+			FROM expenses e 
+			WHERE e.user_id = $1`)
+	}
+
+	// Add category filter if specified
+	if filters.CategoryID != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND ec.category_id = $%d", argIndex))
+		args = append(args, *filters.CategoryID)
+		argIndex++
+	}
+
+	// Add date range filters
+	if filters.StartDate != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND e.expense_date >= $%d", argIndex))
+		args = append(args, *filters.StartDate)
+		argIndex++
+	}
+	if filters.EndDate != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND e.expense_date <= $%d", argIndex))
+		args = append(args, *filters.EndDate)
+		argIndex++
+	}
+
+	// Add amount range filters
+	if filters.MinAmount != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND e.amount >= $%d", argIndex))
+		args = append(args, *filters.MinAmount)
+		argIndex++
+	}
+	if filters.MaxAmount != nil {
+		queryBuilder.WriteString(fmt.Sprintf(" AND e.amount <= $%d", argIndex))
+		args = append(args, *filters.MaxAmount)
+		argIndex++
+	}
+
+	// Always order by creation date (newest first)
+	queryBuilder.WriteString(" ORDER BY e.created_at DESC")
+
+	// Execute the dynamically built query
+	rows, err := h.db.Query(queryBuilder.String(), args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	// Process results same as before
 	expenses := make([]map[string]interface{}, 0)
 	idOrder := make([]uuid.UUID, 0)
 	indexByID := make(map[uuid.UUID]int)
@@ -378,6 +514,16 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interfa
 		return expenses, nil
 	}
 
+	// Fetch and attach category information for each expense
+	if err := h.attachCategoriesToExpenses(expenses, idOrder, indexByID); err != nil {
+		return nil, err
+	}
+
+	return expenses, nil
+}
+
+// attachCategoriesToExpenses fetches and attaches category data to expense records
+func (h *ExpenseHandler) attachCategoriesToExpenses(expenses []map[string]interface{}, idOrder []uuid.UUID, indexByID map[uuid.UUID]int) error {
 	// Build dynamic IN clause for categories
 	placeholders := make([]string, len(idOrder))
 	args := make([]interface{}, len(idOrder))
@@ -389,16 +535,17 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interfa
 
 	catRows, err := h.db.Query(catQuery, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer catRows.Close()
 
+	// Attach categories to their respective expenses
 	for catRows.Next() {
 		var expID, catID uuid.UUID
 		var catName string
 		var isDefault bool
 		if err := catRows.Scan(&expID, &catID, &catName, &isDefault); err != nil {
-			return nil, err
+			return err
 		}
 		if idx, ok := indexByID[expID]; ok {
 			expense := expenses[idx]
@@ -412,5 +559,11 @@ func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interfa
 		}
 	}
 
-	return expenses, nil
+	return nil
+}
+
+// getUserExpenses retrieves all expenses for a user (backward compatibility)
+func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
+	// Use the new filtering function with empty filters for backward compatibility
+	return h.getUserExpensesWithFilters(userID, &ExpenseFilters{})
 }
