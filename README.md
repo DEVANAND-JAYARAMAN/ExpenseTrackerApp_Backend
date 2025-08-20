@@ -143,6 +143,13 @@ The app automatically creates these tables when you first run it:
 - **Returns**: Array of {month: "Aug 2025", total: 1200.00}
 - **Authentication**: Requires login token
 
+#### Dashboard Overview
+- **Endpoint**: `GET /api/dashboard`
+- **What it does**: Returns comprehensive dashboard data including summary stats, monthly trends, and recent expenses
+- **When to use**: To display main dashboard with all key metrics
+- **Returns**: Complete dashboard data with totals, current month stats, charts data, and recent transactions
+- **Authentication**: Requires login token
+
 ## 🧪 Testing the App
 
 ### Using Postman (Recommended)

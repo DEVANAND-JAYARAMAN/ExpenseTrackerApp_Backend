@@ -52,6 +52,7 @@ func main() {
 	protected.POST("/expenses", expenseHandler.AddExpense)
 	protected.GET("/expenses", expenseHandler.GetExpenses)
 	protected.GET("/expenses/summary/monthly", expenseHandler.GetMonthlyExpenseSummary)
+	protected.GET("/dashboard", expenseHandler.GetDashboard)
 	protected.PUT("/expenses/:id", expenseHandler.UpdateExpense)
 	protected.DELETE("/expenses/:id", expenseHandler.DeleteExpense)
 

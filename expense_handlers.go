@@ -622,6 +622,107 @@ func (h *ExpenseHandler) getMonthlyExpenseSummary(userID uuid.UUID) ([]map[strin
 	return summary, nil
 }
 
+// GetDashboard handles getting comprehensive dashboard data for the user
+func (h *ExpenseHandler) GetDashboard(c echo.Context) error {
+	// Verify user authentication
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Get dashboard data from database
+	dashboard, err := h.getDashboardData(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to get dashboard data: %v", err),
+		})
+	}
+
+	// Return comprehensive dashboard data
+	return c.JSON(http.StatusOK, dashboard)
+}
+
+// getDashboardData aggregates all dashboard metrics for the user
+func (h *ExpenseHandler) getDashboardData(userID uuid.UUID) (map[string]interface{}, error) {
+	// Get total expenses count and amount
+	totalQuery := `SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = $1`
+	var totalCount int
+	var totalAmount float64
+	err := h.db.QueryRow(totalQuery, userID).Scan(&totalCount, &totalAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get current month expenses
+	currentMonthQuery := `
+		SELECT COUNT(*), COALESCE(SUM(amount), 0) 
+		FROM expenses 
+		WHERE user_id = $1 
+		AND EXTRACT(MONTH FROM expense_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+		AND EXTRACT(YEAR FROM expense_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+	`
+	var currentMonthCount int
+	var currentMonthAmount float64
+	err = h.db.QueryRow(currentMonthQuery, userID).Scan(&currentMonthCount, &currentMonthAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get monthly summary for charts
+	monthlySummary, err := h.getMonthlyExpenseSummary(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get recent expenses (last 5)
+	recentQuery := `
+		SELECT id, title, amount, expense_date, expense_time 
+		FROM expenses 
+		WHERE user_id = $1 
+		ORDER BY created_at DESC 
+		LIMIT 5
+	`
+	rows, err := h.db.Query(recentQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	recentExpenses := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var id uuid.UUID
+		var title string
+		var amount float64
+		var expenseDate, expenseTime time.Time
+		if err := rows.Scan(&id, &title, &amount, &expenseDate, &expenseTime); err != nil {
+			return nil, err
+		}
+		recentExpenses = append(recentExpenses, map[string]interface{}{
+			"id":           id,
+			"title":        title,
+			"amount":       amount,
+			"expense_date": expenseDate.Format("02-01-2006"),
+			"expense_time": expenseTime.Format("03:04 PM"),
+		})
+	}
+
+	// Build comprehensive dashboard response
+	dashboard := map[string]interface{}{
+		"summary": map[string]interface{}{
+			"total_expenses":        totalCount,
+			"total_amount":          totalAmount,
+			"current_month_count":   currentMonthCount,
+			"current_month_amount":  currentMonthAmount,
+		},
+		"monthly_summary":  monthlySummary,
+		"recent_expenses": recentExpenses,
+	}
+
+	return dashboard, nil
+}
+
 // getUserExpenses retrieves all expenses for a user (backward compatibility)
 func (h *ExpenseHandler) getUserExpenses(userID uuid.UUID) ([]map[string]interface{}, error) {
 	// Use the new filtering function with empty filters for backward compatibility
