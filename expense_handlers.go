@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
+	"strings" // Add this line
 	"time"
 
 	"github.com/google/uuid"
