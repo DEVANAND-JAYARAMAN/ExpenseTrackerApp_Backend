@@ -241,10 +241,4 @@ Coming next:
 - 🔄 Export functionality
 - 🔄 Expense budgeting features
 
-## 🤝 Contributing
 
-Feel free to contribute to this project! Whether it's bug fixes, new features, or documentation improvements, all contributions are welcome.
-
----
-
-*Happy expense tracking! 💸*
