@@ -621,6 +621,80 @@ func (h *ExpenseHandler) getMonthlyExpenseSummary(userID uuid.UUID) ([]map[strin
 	return summary, nil
 }
 
+// getWeeklySummary aggregates expenses by week for the last 4 weeks
+func (h *ExpenseHandler) getWeeklySummary(userID uuid.UUID) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			'Week ' || EXTRACT(WEEK FROM expense_date) || ', ' || EXTRACT(YEAR FROM expense_date) as week,
+			SUM(amount) as total
+		FROM expenses 
+		WHERE user_id = $1 
+		AND expense_date >= CURRENT_DATE - INTERVAL '4 weeks'
+		GROUP BY EXTRACT(YEAR FROM expense_date), EXTRACT(WEEK FROM expense_date)
+		ORDER BY EXTRACT(YEAR FROM expense_date) DESC, EXTRACT(WEEK FROM expense_date) DESC
+		LIMIT 4
+	`
+
+	rows, err := h.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	weeklySummary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var week string
+		var total float64
+		if err := rows.Scan(&week, &total); err != nil {
+			return nil, err
+		}
+		
+		weeklySummary = append(weeklySummary, map[string]interface{}{
+			"week":  week,
+			"total": total,
+		})
+	}
+
+	return weeklySummary, nil
+}
+
+// getDailySummary aggregates expenses by day for the last 7 days
+func (h *ExpenseHandler) getDailySummary(userID uuid.UUID) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			TO_CHAR(expense_date, 'DD Mon') as day,
+			SUM(amount) as total
+		FROM expenses 
+		WHERE user_id = $1 
+		AND expense_date >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY expense_date
+		ORDER BY expense_date DESC
+		LIMIT 7
+	`
+
+	rows, err := h.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	dailySummary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var day string
+		var total float64
+		if err := rows.Scan(&day, &total); err != nil {
+			return nil, err
+		}
+		
+		dailySummary = append(dailySummary, map[string]interface{}{
+			"day":   day,
+			"total": total,
+		})
+	}
+
+	return dailySummary, nil
+}
+
 // GetDashboard handles getting comprehensive dashboard data for the user
 func (h *ExpenseHandler) GetDashboard(c echo.Context) error {
 	// Verify user authentication
@@ -669,8 +743,49 @@ func (h *ExpenseHandler) getDashboardData(userID uuid.UUID) (map[string]interfac
 		return nil, err
 	}
 
+	// Get current week expenses
+	currentWeekQuery := `
+		SELECT COUNT(*), COALESCE(SUM(amount), 0) 
+		FROM expenses 
+		WHERE user_id = $1 
+		AND expense_date >= DATE_TRUNC('week', CURRENT_DATE)
+		AND expense_date < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week'
+	`
+	var currentWeekCount int
+	var currentWeekAmount float64
+	err = h.db.QueryRow(currentWeekQuery, userID).Scan(&currentWeekCount, &currentWeekAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get today's expenses
+	todayQuery := `
+		SELECT COUNT(*), COALESCE(SUM(amount), 0) 
+		FROM expenses 
+		WHERE user_id = $1 
+		AND DATE(expense_date) = CURRENT_DATE
+	`
+	var todayCount int
+	var todayAmount float64
+	err = h.db.QueryRow(todayQuery, userID).Scan(&todayCount, &todayAmount)
+	if err != nil {
+		return nil, err
+	}
+
 	// Get monthly summary for charts
 	monthlySummary, err := h.getMonthlyExpenseSummary(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get weekly summary for the last 4 weeks
+	weeklySummary, err := h.getWeeklySummary(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get daily summary for the last 7 days
+	dailySummary, err := h.getDailySummary(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -714,8 +829,14 @@ func (h *ExpenseHandler) getDashboardData(userID uuid.UUID) (map[string]interfac
 			"total_amount":          totalAmount,
 			"current_month_count":   currentMonthCount,
 			"current_month_amount":  currentMonthAmount,
+			"current_week_count":    currentWeekCount,
+			"current_week_amount":   currentWeekAmount,
+			"today_count":           todayCount,
+			"today_amount":          todayAmount,
 		},
 		"monthly_summary":  monthlySummary,
+		"weekly_summary":   weeklySummary,
+		"daily_summary":    dailySummary,
 		"recent_expenses": recentExpenses,
 	}
 

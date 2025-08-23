@@ -145,9 +145,30 @@ The app automatically creates these tables when you first run it:
 
 #### Dashboard Overview
 - **Endpoint**: `GET /api/dashboard`
-- **What it does**: Returns comprehensive dashboard data including summary stats, monthly trends, and recent expenses
+- **What it does**: Returns comprehensive dashboard data including summary stats, monthly/weekly/daily trends, and recent expenses
 - **When to use**: To display main dashboard with all key metrics
-- **Returns**: Complete dashboard data with totals, current month stats, charts data, and recent transactions
+- **Returns**: Complete dashboard data with totals, current month/week/day stats, charts data, and recent transactions
+- **Authentication**: Requires login token
+
+### Profile Management
+
+#### Get Profile
+- **Endpoint**: `GET /api/profile`
+- **What it does**: Returns user profile information
+- **When to use**: To display user profile details
+- **Returns**: User profile data (name, email, profile image, etc.)
+- **Authentication**: Requires login token
+
+#### Update Profile
+- **Endpoint**: `PUT /api/profile`
+- **What it does**: Updates user profile information (name, profile image)
+- **When to use**: When user wants to modify their profile
+- **Authentication**: Requires login token
+
+#### Change Password
+- **Endpoint**: `PUT /api/profile/password`
+- **What it does**: Changes user password after verifying current password
+- **When to use**: When user wants to update their password
 - **Authentication**: Requires login token
 
 ## 🧪 Testing the App
@@ -227,8 +248,11 @@ This is an active project. Currently implemented:
 - ✅ Delete expenses with proper authorization
 - ✅ View expense list ordered by date
 - ✅ Filter expenses by category, date range, and amount
-- ✅ Monthly expense summary for analytics
-- ✅ JWT-based authentication for all protected routes
+- ✅ Monthly/weekly/daily expense summaries for analytics
+- ✅ Comprehensive dashboard with multiple time breakdowns
+- ✅ Profile management (view, update, change password)
+- ✅ JWT-based authentication (2-day expiration) for all protected routes
+- ✅ Session management with automatic expiration on logout
 - ✅ Login history tracking
 
 Recently completed:

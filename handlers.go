@@ -204,7 +204,7 @@ func (h *AuthHandler) validateCredentials(email, password string) (*User, error)
 func (h *AuthHandler) generateJWT(userID uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
-		"exp":     time.Now().Add(time.Hour * 720).Unix(), // 30 days
+		"exp":     time.Now().Add(time.Hour * 48).Unix(), // 2 days
 		"iat":     time.Now().Unix(),
 	}
 
@@ -222,7 +222,7 @@ func (h *AuthHandler) generateJWT(userID uuid.UUID) (string, error) {
 // createSession creates a new session record
 func (h *AuthHandler) createSession(userID uuid.UUID, token string) (uuid.UUID, error) {
 	sessionID := uuid.New()
-	expiresAt := time.Now().Add(time.Hour * 720) // 30 days
+	expiresAt := time.Now().Add(time.Hour * 48) // 2 days
 	
 	query := `INSERT INTO sessions (id, user_id, token, created_at, expires_at, is_active) VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := h.db.Exec(query, sessionID, userID, token, time.Now(), expiresAt, true)

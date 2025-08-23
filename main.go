@@ -34,16 +34,17 @@ func main() {
 	authHandler := NewAuthHandler(db)
 	expenseHandler := NewExpenseHandler(db)
 	categoryHandler := NewCategoryHandler(db)
+	profileHandler := NewProfileHandler(db)
 
 	// Routes
 	api := e.Group("/api")
-	
+
 	// Public routes
 	api.POST("/register", authHandler.Register)
 	api.POST("/login", authHandler.Login)
-	
+
 	// Protected routes
-	protected := api.Group("", JWTMiddleware())
+	protected := api.Group("", JWTMiddleware(db))
 	protected.POST("/logout", authHandler.Logout)
 	protected.GET("/categories", categoryHandler.GetCategories)
 	protected.POST("/categories", categoryHandler.CreateCategory)
@@ -53,6 +54,9 @@ func main() {
 	protected.GET("/expenses", expenseHandler.GetExpenses)
 	protected.GET("/expenses/summary/monthly", expenseHandler.GetMonthlyExpenseSummary)
 	protected.GET("/dashboard", expenseHandler.GetDashboard)
+	protected.GET("/profile", profileHandler.GetProfile)
+	protected.PUT("/profile", profileHandler.UpdateProfile)
+	protected.PUT("/profile/password", profileHandler.ChangePassword)
 	protected.PUT("/expenses/:id", expenseHandler.UpdateExpense)
 	protected.DELETE("/expenses/:id", expenseHandler.DeleteExpense)
 

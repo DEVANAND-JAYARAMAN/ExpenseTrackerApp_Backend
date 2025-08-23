@@ -171,6 +171,18 @@ type CreateCategoryResponse struct {
 	IsDefault  bool      `json:"is_default,omitempty"`
 }
 
+// UpdateProfileRequest represents the request payload for updating user profile
+type UpdateProfileRequest struct {
+	Name         string  `json:"name" validate:"required,min=2,max=255"`
+	ProfileImage *string `json:"profile_image,omitempty"`
+}
+
+// ChangePasswordRequest represents the request payload for changing password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`

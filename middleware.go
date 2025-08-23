@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
 	"strings"
@@ -10,8 +11,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// JWTMiddleware validates JWT tokens
-func JWTMiddleware() echo.MiddlewareFunc {
+// JWTMiddleware validates JWT tokens and checks session status
+func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get token from Authorization header
@@ -31,6 +32,13 @@ func JWTMiddleware() echo.MiddlewareFunc {
 
 			// Extract token
 			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+			// Check if session is still active
+			if !isSessionActive(db, tokenString) {
+				return c.JSON(http.StatusUnauthorized, ErrorResponse{
+					Error: "Session expired or invalid",
+				})
+			}
 
 			// Parse and validate token
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -69,6 +77,14 @@ func JWTMiddleware() echo.MiddlewareFunc {
 			})
 		}
 	}
+}
+
+// isSessionActive checks if the session is still active in database
+func isSessionActive(db *sql.DB, token string) bool {
+	var isActive bool
+	query := `SELECT is_active FROM sessions WHERE token = $1 AND expires_at > NOW()`
+	err := db.QueryRow(query, token).Scan(&isActive)
+	return err == nil && isActive
 }
 
 // getUserIDFromContext extracts user ID from echo context
