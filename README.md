@@ -136,13 +136,6 @@ The app automatically creates these tables when you first run it:
 - **Parameters**: category_id, start_date, end_date, min_amount, max_amount (all optional)
 - **Authentication**: Requires login token
 
-#### Monthly Expense Summary
-- **Endpoint**: `GET /api/expenses/summary/monthly`
-- **What it does**: Returns monthly expense totals for chart display
-- **When to use**: To visualize spending trends over time
-- **Returns**: Array of {month: "Aug 2025", total: 1200.00}
-- **Authentication**: Requires login token
-
 #### Dashboard Overview
 - **Endpoint**: `GET /api/dashboard`
 - **What it does**: Returns comprehensive dashboard data including summary stats, monthly/weekly/daily trends, and recent expenses
@@ -199,34 +192,10 @@ The app automatically creates these tables when you first run it:
      ```
    - **Save the token** from the response for expense operations!
 
-3. **Add an expense:**
-   - Method: POST
-   - URL: `http://localhost:3000/api/expenses`
-   - Headers: `Authorization: Bearer your_jwt_token`
-   - Body:
-     ```json
-     {
-       "title": "Groceries",
-       "description": "Weekly grocery shopping",
-       "amount": 75.50,
-       "category_id": "your-category-uuid",
-       "expense_date": "2024-01-15",
-       "expense_time": "14:30"
-     }
-     ```
-
-4. **Update an expense:**
-   - Method: PUT
-   - URL: `http://localhost:3000/api/expenses/expense-id`
-   - Headers: `Authorization: Bearer your_jwt_token`
-   - Body: Same as add expense
-
-5. **Delete an expense:**
-   - Method: DELETE
-   - URL: `http://localhost:3000/api/expenses/expense-id`
-   - Headers: `Authorization: Bearer your_jwt_token`
-
-For detailed testing examples, check the `POSTMAN_ENDPOINTS.md` file.
+3. **Test API endpoints:**
+   - Use the endpoints documented above
+   - All protected endpoints require `Authorization: Bearer your_jwt_token` header
+   - Refer to the API endpoint documentation for request/response formats
 
 ## 🛠️ Technology Stack
 
@@ -254,11 +223,6 @@ This is an active project. Currently implemented:
 - ✅ JWT-based authentication (2-day expiration) for all protected routes
 - ✅ Session management with automatic expiration on logout
 - ✅ Login history tracking
-
-Recently completed:
-- ✅ View expense history and lists
-- ✅ Advanced expense filtering by category, date, and amount
-- ✅ Monthly expense summary for charts and analytics
 
 Coming next:
 - 🔄 Category-wise expense breakdown

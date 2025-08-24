@@ -695,6 +695,312 @@ func (h *ExpenseHandler) getDailySummary(userID uuid.UUID) ([]map[string]interfa
 	return dailySummary, nil
 }
 
+// GetDailySummaryPaginated handles getting paginated daily expense summary
+func (h *ExpenseHandler) GetDailySummaryPaginated(c echo.Context) error {
+	// Verify user authentication
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Parse pagination parameters
+	page := 1
+	limit := 10
+	if pageStr := c.QueryParam("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Get paginated daily summary
+	summary, total, err := h.getDailySummaryPaginated(userID, page, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to get daily summary: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":        summary,
+		"page":        page,
+		"limit":       limit,
+		"total":       total,
+		"total_pages": (total + limit - 1) / limit,
+	})
+}
+
+// GetMonthlySummaryPaginated handles getting paginated monthly expense summary
+func (h *ExpenseHandler) GetMonthlySummaryPaginated(c echo.Context) error {
+	// Verify user authentication
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Parse pagination parameters
+	page := 1
+	limit := 12
+	if pageStr := c.QueryParam("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Get paginated monthly summary
+	summary, total, err := h.getMonthlySummaryPaginated(userID, page, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to get monthly summary: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":        summary,
+		"page":        page,
+		"limit":       limit,
+		"total":       total,
+		"total_pages": (total + limit - 1) / limit,
+	})
+}
+
+// GetWeeklySummaryPaginated handles getting paginated weekly expense summary for a specific month
+func (h *ExpenseHandler) GetWeeklySummaryPaginated(c echo.Context) error {
+	// Verify user authentication
+	userID := getUserIDFromContext(c)
+	if userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	// Parse month parameter (required)
+	month := c.QueryParam("month") // Format: YYYY-MM
+	if month == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{
+			Error: "Month parameter is required (format: YYYY-MM)",
+		})
+	}
+
+	// Parse pagination parameters
+	page := 1
+	limit := 10
+	if pageStr := c.QueryParam("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Get paginated weekly summary for the month
+	summary, total, err := h.getWeeklySummaryPaginated(userID, month, page, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: fmt.Sprintf("Failed to get weekly summary: %v", err),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":        summary,
+		"month":       month,
+		"page":        page,
+		"limit":       limit,
+		"total":       total,
+		"total_pages": (total + limit - 1) / limit,
+	})
+}
+
+// Helper functions for paginated summaries
+
+// getDailySummaryPaginated gets paginated daily expense summary
+func (h *ExpenseHandler) getDailySummaryPaginated(userID uuid.UUID, page, limit int) ([]map[string]interface{}, int, error) {
+	// Get total count
+	countQuery := `
+		SELECT COUNT(DISTINCT expense_date) 
+		FROM expenses 
+		WHERE user_id = $1
+	`
+	var total int
+	err := h.db.QueryRow(countQuery, userID).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	offset := (page - 1) * limit
+	query := `
+		SELECT 
+			TO_CHAR(expense_date, 'DD Mon YYYY') as day,
+			expense_date,
+			SUM(amount) as total,
+			COUNT(*) as expense_count
+		FROM expenses 
+		WHERE user_id = $1 
+		GROUP BY expense_date
+		ORDER BY expense_date DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := h.db.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	summary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var day string
+		var expenseDate time.Time
+		var total float64
+		var count int
+		if err := rows.Scan(&day, &expenseDate, &total, &count); err != nil {
+			return nil, 0, err
+		}
+		
+		summary = append(summary, map[string]interface{}{
+			"day":           day,
+			"date":          expenseDate.Format("2006-01-02"),
+			"total":         total,
+			"expense_count": count,
+		})
+	}
+
+	return summary, total, nil
+}
+
+// getMonthlySummaryPaginated gets paginated monthly expense summary
+func (h *ExpenseHandler) getMonthlySummaryPaginated(userID uuid.UUID, page, limit int) ([]map[string]interface{}, int, error) {
+	// Get total count
+	countQuery := `
+		SELECT COUNT(DISTINCT TO_CHAR(expense_date, 'YYYY-MM')) 
+		FROM expenses 
+		WHERE user_id = $1
+	`
+	var total int
+	err := h.db.QueryRow(countQuery, userID).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	offset := (page - 1) * limit
+	query := `
+		SELECT 
+			TO_CHAR(expense_date, 'Mon YYYY') as month,
+			TO_CHAR(expense_date, 'YYYY-MM') as month_key,
+			SUM(amount) as total,
+			COUNT(*) as expense_count
+		FROM expenses 
+		WHERE user_id = $1 
+		GROUP BY TO_CHAR(expense_date, 'YYYY-MM'), TO_CHAR(expense_date, 'Mon YYYY')
+		ORDER BY TO_CHAR(expense_date, 'YYYY-MM') DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := h.db.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	summary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var month, monthKey string
+		var total float64
+		var count int
+		if err := rows.Scan(&month, &monthKey, &total, &count); err != nil {
+			return nil, 0, err
+		}
+		
+		summary = append(summary, map[string]interface{}{
+			"month":         month,
+			"month_key":     monthKey,
+			"total":         total,
+			"expense_count": count,
+		})
+	}
+
+	return summary, total, nil
+}
+
+// getWeeklySummaryPaginated gets paginated weekly expense summary for a specific month
+func (h *ExpenseHandler) getWeeklySummaryPaginated(userID uuid.UUID, month string, page, limit int) ([]map[string]interface{}, int, error) {
+	// Get total count for the month
+	countQuery := `
+		SELECT COUNT(DISTINCT EXTRACT(WEEK FROM expense_date)) 
+		FROM expenses 
+		WHERE user_id = $1 AND TO_CHAR(expense_date, 'YYYY-MM') = $2
+	`
+	var total int
+	err := h.db.QueryRow(countQuery, userID, month).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	offset := (page - 1) * limit
+	query := `
+		SELECT 
+			'Week ' || EXTRACT(WEEK FROM expense_date) as week,
+			EXTRACT(WEEK FROM expense_date) as week_number,
+			SUM(amount) as total,
+			COUNT(*) as expense_count,
+			MIN(expense_date) as week_start,
+			MAX(expense_date) as week_end
+		FROM expenses 
+		WHERE user_id = $1 AND TO_CHAR(expense_date, 'YYYY-MM') = $2
+		GROUP BY EXTRACT(WEEK FROM expense_date)
+		ORDER BY EXTRACT(WEEK FROM expense_date) DESC
+		LIMIT $3 OFFSET $4
+	`
+
+	rows, err := h.db.Query(query, userID, month, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	summary := make([]map[string]interface{}, 0)
+	for rows.Next() {
+		var week string
+		var weekNumber int
+		var total float64
+		var count int
+		var weekStart, weekEnd time.Time
+		if err := rows.Scan(&week, &weekNumber, &total, &count, &weekStart, &weekEnd); err != nil {
+			return nil, 0, err
+		}
+		
+		summary = append(summary, map[string]interface{}{
+			"week":          week,
+			"week_number":   weekNumber,
+			"total":         total,
+			"expense_count": count,
+			"week_start":    weekStart.Format("2006-01-02"),
+			"week_end":      weekEnd.Format("2006-01-02"),
+		})
+	}
+
+	return summary, total, nil
+}
+
 // GetDashboard handles getting comprehensive dashboard data for the user
 func (h *ExpenseHandler) GetDashboard(c echo.Context) error {
 	// Verify user authentication
