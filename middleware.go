@@ -18,7 +18,7 @@ func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 			// Get token from Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return SendCustomError(c, ErrorMissingFields, "Authorization header required", http.StatusUnauthorized)
+				return SendStandardError(c, ErrorUnauthorized)
 			}
 
 			// Check if it starts with "Bearer "

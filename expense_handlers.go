@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
+	"strings" // Add this line
 	"time"
 
 	"github.com/google/uuid"
@@ -129,7 +129,7 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
-	// Check if expense exists and belongs to user or not
+	// Check if expense exists and belongs to user
 	exists, err := h.expenseExistsForUser(expenseID, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{

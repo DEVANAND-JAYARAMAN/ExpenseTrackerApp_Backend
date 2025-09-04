@@ -224,9 +224,3 @@ This is an active project. Currently implemented:
 - ✅ Session management with automatic expiration on logout
 - ✅ Login history tracking
 
-Coming next:
-- 🔄 Category-wise expense breakdown
-- 🔄 Export functionality
-- 🔄 Expense budgeting features
-
-

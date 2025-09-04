@@ -5,6 +5,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type StandardErrorResponse struct {
+	Error      string `json:"error"`
+	Message    string `json:"message"`
+	StatusCode int    `json:"status_code"`
+}
+
 // Error codes for standardized error responses
 const (
 	// Authentication errors
