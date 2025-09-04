@@ -8,15 +8,15 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID             uuid.UUID  `json:"id" db:"id"`
-	Name           string     `json:"name" db:"name"`
-	Email          string     `json:"email" db:"email"`
-	Password       string     `json:"-" db:"password"`
-	ProfileImage   *string    `json:"profile_image,omitempty" db:"profile_image"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
-	IsActive       bool       `json:"is_active" db:"is_active"`
-	DeactivatedAt  *time.Time `json:"deactivated_at,omitempty" db:"deactivated_at"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	Name          string     `json:"name" db:"name"`
+	Email         string     `json:"email" db:"email"`
+	Password      string     `json:"-" db:"password"`
+	ProfileImage  *string    `json:"profile_image,omitempty" db:"profile_image"`
+	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	IsActive      bool       `json:"is_active" db:"is_active"`
+	DeactivatedAt *time.Time `json:"deactivated_at,omitempty" db:"deactivated_at"`
 }
 
 // Category represents an expense category
@@ -36,8 +36,8 @@ type Expense struct {
 	Title       string    `json:"title" db:"title"`
 	Description *string   `json:"description,omitempty" db:"description"`
 	Amount      float64   `json:"amount" db:"amount"`
-	ExpenseDate string `json:"expense_date" db:"expense_date"`
-	ExpenseTime string `json:"expense_time" db:"expense_time"`
+	ExpenseDate string    `json:"expense_date" db:"expense_date"`
+	ExpenseTime string    `json:"expense_time" db:"expense_time"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -95,11 +95,11 @@ type LoginResponse struct {
 // AddExpenseRequest represents the request payload for adding an expense
 
 type AddExpenseRequest struct {
-	Title       string     `json:"title" validate:"required"`
-	Description *string    `json:"description,omitempty"`
-	Amount      float64    `json:"amount" validate:"required,gt=0"`
-	ExpenseDate string     `json:"expense_date" validate:"required"`
-	ExpenseTime string     `json:"expense_time" validate:"required"`
+	Title       string      `json:"title" validate:"required"`
+	Description *string     `json:"description,omitempty"`
+	Amount      float64     `json:"amount" validate:"required,gt=0"`
+	ExpenseDate string      `json:"expense_date" validate:"required"`
+	ExpenseTime string      `json:"expense_time" validate:"required"`
 	Categories  []uuid.UUID `json:"categories" validate:"required,dive,uuid"`
 }
 
@@ -127,11 +127,11 @@ type ExpenseDetailResponse struct {
 
 // UpdateExpenseRequest represents the request payload for updating an expense
 type UpdateExpenseRequest struct {
-	Title       string     `json:"title" validate:"required"`
-	Description *string    `json:"description,omitempty"`
-	Amount      float64    `json:"amount" validate:"required,gt=0"`
-	ExpenseDate string     `json:"expense_date" validate:"required"`
-	ExpenseTime string     `json:"expense_time" validate:"required"`
+	Title       string      `json:"title" validate:"required"`
+	Description *string     `json:"description,omitempty"`
+	Amount      float64     `json:"amount" validate:"required,gt=0"`
+	ExpenseDate string      `json:"expense_date" validate:"required"`
+	ExpenseTime string      `json:"expense_time" validate:"required"`
 	Categories  []uuid.UUID `json:"categories" validate:"required,dive,uuid"`
 }
 
@@ -188,9 +188,4 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// StandardErrorResponse represents a standardized error response with error codes
-type StandardErrorResponse struct {
-	Error      string `json:"error"`       // Error type/code (e.g., "session_expired", "validation_failed")
-	Message    string `json:"message"`     // Human-readable error message
-	StatusCode int    `json:"status_code"` // HTTP status code
-}
+// SuccessResponse represents a generic success response
