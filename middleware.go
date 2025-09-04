@@ -18,16 +18,12 @@ func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 			// Get token from Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, ErrorResponse{
-					Error: "Authorization header required",
-				})
+				return SendCustomError(c, ErrorMissingFields, "Authorization header required", http.StatusUnauthorized)
 			}
 
 			// Check if it starts with "Bearer "
 			if !strings.HasPrefix(authHeader, "Bearer ") {
-				return c.JSON(http.StatusUnauthorized, ErrorResponse{
-					Error: "Invalid authorization format",
-				})
+				return SendStandardError(c, ErrorInvalidToken)
 			}
 
 			// Extract token
@@ -35,9 +31,7 @@ func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 
 			// Check if session is still active
 			if !isSessionActive(db, tokenString) {
-				return c.JSON(http.StatusUnauthorized, ErrorResponse{
-					Error: "Session expired or invalid",
-				})
+				return SendStandardError(c, ErrorSessionExpired)
 			}
 
 			// Parse and validate token
@@ -56,9 +50,7 @@ func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 			})
 
 			if err != nil || !token.Valid {
-				return c.JSON(http.StatusUnauthorized, ErrorResponse{
-					Error: "Invalid or expired token",
-				})
+				return SendStandardError(c, ErrorInvalidToken)
 			}
 
 			// Extract user ID from claims
@@ -72,9 +64,7 @@ func JWTMiddleware(db *sql.DB) echo.MiddlewareFunc {
 				}
 			}
 
-			return c.JSON(http.StatusUnauthorized, ErrorResponse{
-				Error: "Invalid token claims",
-			})
+			return SendStandardError(c, ErrorInvalidToken)
 		}
 	}
 }

@@ -187,3 +187,10 @@ type ChangePasswordRequest struct {
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
+
+// StandardErrorResponse represents a standardized error response with error codes
+type StandardErrorResponse struct {
+	Error      string `json:"error"`       // Error type/code (e.g., "session_expired", "validation_failed")
+	Message    string `json:"message"`     // Human-readable error message
+	StatusCode int    `json:"status_code"` // HTTP status code
+}

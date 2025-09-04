@@ -27,9 +27,7 @@ func (h *ProfileHandler) GetProfile(c echo.Context) error {
 	// Extract user ID from JWT token
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
+		return SendStandardError(c, ErrorUnauthorized)
 	}
 
 	// Fetch user profile from database
@@ -51,23 +49,17 @@ func (h *ProfileHandler) UpdateProfile(c echo.Context) error {
 	// Extract user ID from JWT token
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
+		return SendStandardError(c, ErrorUnauthorized)
 	}
 
 	var req UpdateProfileRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid request body",
-		})
+		return SendStandardError(c, ErrorInvalidRequest)
 	}
 
 	// Validate profile data
 	if strings.TrimSpace(req.Name) == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Name is required",
-		})
+		return SendCustomError(c, ErrorValidationFailed, "Name is required", http.StatusBadRequest)
 	}
 
 	// Update user profile in database

@@ -29,16 +29,12 @@ func (h *AuthHandler) Register(c echo.Context) error {
 
 	// Parse request body
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid request body",
-		})
+		return SendStandardError(c, ErrorInvalidRequest)
 	}
 
 	// Validate request
 	if err := validateRegisterRequest(req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: err.Error(),
-		})
+		return SendCustomError(c, ErrorValidationFailed, err.Error(), http.StatusBadRequest)
 	}
 
 	// Check if email already exists
@@ -49,9 +45,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		})
 	}
 	if exists {
-		return c.JSON(http.StatusConflict, ErrorResponse{
-			Error: "Email already exists",
-		})
+		return SendCustomError(c, ErrorAlreadyExists, "Email already exists", http.StatusConflict)
 	}
 
 	// Hash password
@@ -139,17 +133,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	// Parse request body
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid request body",
-		})
+		return SendStandardError(c, ErrorInvalidRequest)
 	}
 
 	// Validate credentials
 	user, err := h.validateCredentials(req.Email, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Email or Password is Wrong",
-		})
+		return SendStandardError(c, ErrorInvalidCredentials)
 	}
 
 	// Generate JWT token
@@ -251,17 +241,13 @@ func (h *AuthHandler) recordLoginHistory(userID uuid.UUID) error {
 func (h *AuthHandler) Logout(c echo.Context) error {
 	userID := getUserIDFromContext(c)
 	if userID == uuid.Nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
+		return SendStandardError(c, ErrorUnauthorized)
 	}
 
 	// Get token from header
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Authorization header required",
-		})
+		return SendCustomError(c, ErrorMissingFields, "Authorization header required", http.StatusBadRequest)
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")

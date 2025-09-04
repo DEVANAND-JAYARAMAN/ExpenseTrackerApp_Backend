@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strings" // Add this line
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -128,7 +129,7 @@ func (h *ExpenseHandler) UpdateExpense(c echo.Context) error {
 		})
 	}
 
-	// Check if expense exists and belongs to user
+	// Check if expense exists and belongs to user or not
 	exists, err := h.expenseExistsForUser(expenseID, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -610,7 +611,7 @@ func (h *ExpenseHandler) getMonthlyExpenseSummary(userID uuid.UUID) ([]map[strin
 		if err := rows.Scan(&month, &total); err != nil {
 			return nil, err
 		}
-		
+
 		// Add formatted entry to summary
 		summary = append(summary, map[string]interface{}{
 			"month": month,
@@ -648,7 +649,7 @@ func (h *ExpenseHandler) getWeeklySummary(userID uuid.UUID) ([]map[string]interf
 		if err := rows.Scan(&week, &total); err != nil {
 			return nil, err
 		}
-		
+
 		weeklySummary = append(weeklySummary, map[string]interface{}{
 			"week":  week,
 			"total": total,
@@ -685,7 +686,7 @@ func (h *ExpenseHandler) getDailySummary(userID uuid.UUID) ([]map[string]interfa
 		if err := rows.Scan(&day, &total); err != nil {
 			return nil, err
 		}
-		
+
 		dailySummary = append(dailySummary, map[string]interface{}{
 			"day":   day,
 			"total": total,
@@ -873,7 +874,7 @@ func (h *ExpenseHandler) getDailySummaryPaginated(userID uuid.UUID, page, limit 
 		if err := rows.Scan(&day, &expenseDate, &total, &count); err != nil {
 			return nil, 0, err
 		}
-		
+
 		summary = append(summary, map[string]interface{}{
 			"day":           day,
 			"date":          expenseDate.Format("2006-01-02"),
@@ -928,7 +929,7 @@ func (h *ExpenseHandler) getMonthlySummaryPaginated(userID uuid.UUID, page, limi
 		if err := rows.Scan(&month, &monthKey, &total, &count); err != nil {
 			return nil, 0, err
 		}
-		
+
 		summary = append(summary, map[string]interface{}{
 			"month":         month,
 			"month_key":     monthKey,
@@ -987,7 +988,7 @@ func (h *ExpenseHandler) getWeeklySummaryPaginated(userID uuid.UUID, month strin
 		if err := rows.Scan(&week, &weekNumber, &total, &count, &weekStart, &weekEnd); err != nil {
 			return nil, 0, err
 		}
-		
+
 		summary = append(summary, map[string]interface{}{
 			"week":          week,
 			"week_number":   weekNumber,
@@ -1131,18 +1132,18 @@ func (h *ExpenseHandler) getDashboardData(userID uuid.UUID) (map[string]interfac
 	// Build comprehensive dashboard response
 	dashboard := map[string]interface{}{
 		"summary": map[string]interface{}{
-			"total_expenses":        totalCount,
-			"total_amount":          totalAmount,
-			"current_month_count":   currentMonthCount,
-			"current_month_amount":  currentMonthAmount,
-			"current_week_count":    currentWeekCount,
-			"current_week_amount":   currentWeekAmount,
-			"today_count":           todayCount,
-			"today_amount":          todayAmount,
+			"total_expenses":       totalCount,
+			"total_amount":         totalAmount,
+			"current_month_count":  currentMonthCount,
+			"current_month_amount": currentMonthAmount,
+			"current_week_count":   currentWeekCount,
+			"current_week_amount":  currentWeekAmount,
+			"today_count":          todayCount,
+			"today_amount":         todayAmount,
 		},
-		"monthly_summary":  monthlySummary,
-		"weekly_summary":   weeklySummary,
-		"daily_summary":    dailySummary,
+		"monthly_summary": monthlySummary,
+		"weekly_summary":  weeklySummary,
+		"daily_summary":   dailySummary,
 		"recent_expenses": recentExpenses,
 	}
 
